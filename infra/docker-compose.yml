@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 16 - Base de datos principal
+  postgres:
+    image: postgres:16-alpine
+    container_name: cerveceria-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cerveceria_usc}
+      POSTGRES_USER: ${POSTGRES_USER:-cerveceria_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cerveceria_password}
+      POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD:-scram-sha-256}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - cerveceria-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cerveceria_user} -d ${POSTGRES_DB:-cerveceria_usc}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # n8n - Plataforma de automatización RPA
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: cerveceria-n8n
+    restart: unless-stopped
+    environment:
+      # Configuración básica de n8n
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-true}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-n8n_password}
+      
+      # Base de datos para n8n (usando PostgreSQL)
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${N8N_DB_NAME:-n8n}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-cerveceria_user}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-cerveceria_password}
+      
+      # Configuración de seguridad
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-your-encryption-key-here}
+      
+      # Configuración de red
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678}
+      
+      # Configuración de timezone
+      GENERIC_TIMEZONE: ${TIMEZONE:-America/Bogota}
+      TZ: ${TIMEZONE:-America/Bogota}
+      
+      # Configuración de logs
+      N8N_LOG_LEVEL: ${N8N_LOG_LEVEL:-info}
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/home/node/.n8n/workflows
+      - ./n8n/credentials:/home/node/.n8n/credentials
+    networks:
+      - cerveceria-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Adminer - Interfaz web para administrar PostgreSQL (opcional)
+  adminer:
+    image: adminer:latest
+    container_name: cerveceria-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    networks:
+      - cerveceria-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - tools # Solo se inicia si se especifica el perfil 'tools'
+
+  # Redis - Cache y sesiones (opcional)
+  redis:
+    image: redis:7-alpine
+    container_name: cerveceria-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cerveceria-network
+    profiles:
+      - cache # Solo se inicia si se especifica el perfil 'cache'
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+  n8n_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  cerveceria-network:
+    driver: bridge
+    name: cerveceria-network

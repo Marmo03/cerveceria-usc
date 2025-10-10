@@ -1,0 +1,45 @@
+name: 🔄 Dependency Updates
+
+on:
+  schedule:
+    # Ejecutar todos los lunes a las 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Permite ejecución manual
+
+jobs:
+  update-dependencies:
+    name: 📦 Update Dependencies
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 🔍 Check for outdated packages
+        run: |
+          echo "📊 Checking outdated packages..."
+          npm outdated || true
+          
+      - name: 📋 Create dependency report
+        run: |
+          echo "# 📦 Weekly Dependency Report" > dependency-report.md
+          echo "" >> dependency-report.md
+          echo "Generated on: $(date)" >> dependency-report.md
+          echo "" >> dependency-report.md
+          echo "## Outdated packages:" >> dependency-report.md
+          npm outdated --json || echo "All packages are up to date!" >> dependency-report.md
+
+      - name: 📤 Upload dependency report
+        uses: actions/upload-artifact@v3
+        with:
+          name: dependency-report
+          path: dependency-report.md
+          retention-days: 30
