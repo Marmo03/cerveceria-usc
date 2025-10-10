@@ -1,0 +1,175 @@
+// Schema de Prisma para Cervecería USC
+// Generado para Node.js con cliente TypeScript
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Tabla de Roles del sistema
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique // Admin, Operario, Aprobador, Analista
+  description String?
+  permissions Json     // Permisos específicos del rol
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  users User[]
+
+  @@map("roles")
+}
+
+// Tabla de Usuarios
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String   // Hash bcrypt
+  firstName String
+  lastName  String
+  isActive  Boolean  @default(true)
+  roleId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  role              Role               @relation(fields: [roleId], references: [id])
+  sales             Sale[]
+  inventoryMovements InventoryMovement[]
+  importJobs        ImportJob[]
+
+  @@map("users")
+}
+
+// Tabla de Productos
+model Product {
+  id          String   @id @default(cuid())
+  sku         String   @unique // SKU único del producto
+  name        String
+  description String?
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  initialStock Int     @default(0)
+  currentStock Int     @default(0)
+  minStock     Int     @default(0) // Para alertas de stock bajo
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relaciones
+  saleItems          SaleItem[]
+  inventoryMovements InventoryMovement[]
+
+  @@map("products")
+}
+
+// Tabla de Ventas
+model Sale {
+  id           String    @id @default(cuid())
+  saleNumber   String    @unique // Número de venta generado
+  customerName String?   // Nombre del cliente (opcional)
+  saleDate     DateTime  @default(now())
+  totalAmount  Decimal   @db.Decimal(10, 2)
+  status       SaleStatus @default(PENDING)
+  notes        String?
+  userId       String    // Usuario que registró la venta
+  approvedBy   String?   // Usuario que aprobó (si aplica)
+  approvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relaciones
+  user      User       @relation(fields: [userId], references: [id])
+  saleItems SaleItem[]
+  importJob ImportJob? @relation(fields: [importJobId], references: [id])
+  importJobId String?
+
+  @@map("sales")
+}
+
+// Tabla de Items de Venta (detalle de cada venta)
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  productId String
+  quantity  Int
+  unitPrice Decimal @db.Decimal(10, 2)
+  subtotal  Decimal @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("sale_items")
+}
+
+// Tabla de Movimientos de Inventario
+model InventoryMovement {
+  id          String      @id @default(cuid())
+  productId   String
+  movementType MovementType
+  quantity    Int         // Positivo para entrada, negativo para salida
+  previousStock Int
+  newStock    Int
+  reason      String      // Descripción del motivo del movimiento
+  reference   String?     // Referencia externa (ej: número de venta)
+  userId      String
+  createdAt   DateTime    @default(now())
+
+  // Relaciones
+  product Product @relation(fields: [productId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("inventory_movements")
+}
+
+// Tabla de Jobs de Importación
+model ImportJob {
+  id          String      @id @default(cuid())
+  fileName    String      // Nombre del archivo importado
+  fileType    String      // CSV, XLSX, etc.
+  status      ImportStatus @default(PENDING)
+  totalRows   Int         @default(0)
+  processedRows Int       @default(0)
+  errorRows   Int         @default(0)
+  errors      Json?       // Errores detallados de la importación
+  userId      String
+  startedAt   DateTime    @default(now())
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relaciones
+  user  User   @relation(fields: [userId], references: [id])
+  sales Sale[]
+
+  @@map("import_jobs")
+}
+
+// Enums para estados y tipos
+enum SaleStatus {
+  PENDING     // Pendiente de aprobación
+  APPROVED    // Aprobada
+  REJECTED    // Rechazada
+  CANCELLED   // Cancelada
+}
+
+enum MovementType {
+  ENTRY       // Entrada de inventario
+  EXIT        // Salida de inventario
+  ADJUSTMENT  // Ajuste de inventario
+  SALE        // Salida por venta
+}
+
+enum ImportStatus {
+  PENDING     // En espera
+  PROCESSING  // Procesando
+  COMPLETED   // Completado exitosamente
+  FAILED      // Falló
+  PARTIAL     // Completado con errores
+}
