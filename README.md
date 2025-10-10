@@ -1,8 +1,8 @@
-# Cervecería USC 🍺
+# Cervecería USC
 
-Sistema de gestión integral para Cervecería USC - Proyecto universitario desarrollado con tecnologías modernas.
+Plataforma web de RPA para la cadena de suministros de la cervecería USC
 
-## 🛠️ Stack Tecnológico
+## Stack Tecnológico
 
 ### Frontend
 
@@ -26,7 +26,7 @@ Sistema de gestión integral para Cervecería USC - Proyecto universitario desar
 - **P2P (Peer-to-Peer)** - Metodología de desarrollo colaborativo
 - **ADRs** - Architecture Decision Records para documentar decisiones técnicas
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 cerveceria-usc/
@@ -46,7 +46,7 @@ cerveceria-usc/
 └── CODEOWNERS           # Propietarios de código
 ```
 
-## 🚀 Inicio Rápido
+## Inicio Rápido
 
 ### Prerrequisitos
 
@@ -102,7 +102,7 @@ cerveceria-usc/
 - **n8n**: http://localhost:5678
 - **Prisma Studio**: http://localhost:5555
 
-## 📜 Scripts Disponibles
+## Scripts Disponibles
 
 ### Desarrollo
 
@@ -143,7 +143,7 @@ cerveceria-usc/
 
 - `npm run commit` - Commit interactivo con Conventional Commits
 
-## 🔄 Flujo de Trabajo (Workflow)
+## Flujo de Trabajo (Workflow)
 
 ### Estructura de Branches
 
@@ -173,7 +173,7 @@ chore: update dependencies
 - **Peer Reviews**: Todos los PRs requieren revisión
 - **Pair Programming**: Sesiones colaborativas documentadas
 
-## 🏗️ Arquitectura
+## Arquitectura
 
 ### Frontend (Vue.js)
 
@@ -195,7 +195,7 @@ chore: update dependencies
 - **Prisma Schema** - Definición de modelos
 - **Migraciones** - Control de versiones DB
 
-## 📋 ADRs (Architecture Decision Records)
+## ADRs (Architecture Decision Records)
 
 Las decisiones técnicas importantes se documentan en `docs/ADRs/`:
 
@@ -203,7 +203,7 @@ Las decisiones técnicas importantes se documentan en `docs/ADRs/`:
 - [ADR-002: Fastify como Framework Backend](docs/ADRs/ADR-002-fastify-backend.md)
 - [ADR-003: Prisma como ORM](docs/ADRs/ADR-003-prisma-orm.md)
 
-## 🤝 Contribución
+## Contribución
 
 1. Fork el proyecto
 2. Crea una rama para tu feature (`git checkout -b feat/amazing-feature`)
@@ -218,17 +218,17 @@ Las decisiones técnicas importantes se documentan en `docs/ADRs/`:
 - Documentar cambios en ADRs si es necesario
 - Actualizar bitácoras P2P diarias
 
-## 📊 CI/CD
+## CI/CD
 
 GitHub Actions automatiza:
 
-- ✅ **Linting** y formato de código
-- 🧪 **Tests** unitarios y de integración
-- 🏗️ **Build** de ambos paquetes
-- 🔍 **Análisis de código** con SonarCloud
-- 🚀 **Deploy** automático a staging
+- **Linting** y formato de código
+- **Tests** unitarios y de integración
+- **Build** de ambos paquetes
+- **Análisis de código** con SonarCloud
+- **Deploy** automático a staging
 
-## 📝 Documentación P2P
+## Documentación P2P
 
 ### Bitácoras Diarias
 
@@ -241,18 +241,18 @@ GitHub Actions automatiza:
 - Registros de code reviews
 - Comunicación del equipo
 
-## 🐛 Reportar Issues
+## Reportar Issues
 
 Usa nuestros templates:
 
-- [🐛 Bug Report](.github/ISSUE_TEMPLATE/bug.md)
-- [✨ Feature Request](.github/ISSUE_TEMPLATE/feature.md)
+- [Bug Report](.github/ISSUE_TEMPLATE/bug.md)
+- [Feature Request](.github/ISSUE_TEMPLATE/feature.md)
 
-## 📄 Licencia
+## Licencia
 
 Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
 
-## 👥 Equipo
+## Equipo
 
 - **Lead Developer** - [@Marmo03](https://github.com/Marmo03)
 - **Desarrollador 2** - [@colaborador](https://github.com/colaborador)
@@ -261,4 +261,4 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 **Universidad**: USC - Gestión de Proyectos TI  
 **Semestre**: 7  
-**Año**: 2024
+**Año**: 2025
