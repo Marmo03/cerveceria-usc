@@ -5,20 +5,24 @@ Sistema de gestión integral para Cervecería USC - Proyecto universitario desar
 ## 🛠️ Stack Tecnológico
 
 ### Frontend
+
 - **Vue.js 3** - Framework progresivo de JavaScript
 - **Vite** - Build tool rápido y moderno
 - **TypeScript** - Tipado estático para JavaScript
 
 ### Backend
+
 - **Fastify** - Framework web rápido y eficiente
 - **Prisma** - ORM moderno para Node.js
 - **PostgreSQL 16** - Base de datos relacional
 
 ### Automatización
+
 - **n8n** - Plataforma de automatización RPA
 - **Docker** - Containerización de servicios
 
 ### Metodología
+
 - **P2P (Peer-to-Peer)** - Metodología de desarrollo colaborativo
 - **ADRs** - Architecture Decision Records para documentar decisiones técnicas
 
@@ -45,6 +49,7 @@ cerveceria-usc/
 ## 🚀 Inicio Rápido
 
 ### Prerrequisitos
+
 - Node.js >= 18.0.0
 - npm >= 9.0.0
 - Docker y Docker Compose
@@ -53,28 +58,33 @@ cerveceria-usc/
 ### Instalación
 
 1. **Clonar el repositorio**
+
    ```bash
-   git clone https://github.com/tu-usuario/cerveceria-usc.git
+   git clone https://github.com/Marmo03/cerveceria-usc.git
    cd cerveceria-usc
    ```
 
 2. **Instalar dependencias**
+
    ```bash
    npm install
    ```
 
 3. **Configurar variables de entorno**
+
    ```bash
    cp infra/.env.example infra/.env
    # Editar infra/.env con tus configuraciones
    ```
 
 4. **Iniciar servicios de infraestructura**
+
    ```bash
    npm run docker:up
    ```
 
 5. **Configurar base de datos**
+
    ```bash
    npm run db:migrate
    npm run db:seed
@@ -86,6 +96,7 @@ cerveceria-usc/
    ```
 
 ### URLs de Desarrollo
+
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:3000
 - **n8n**: http://localhost:5678
@@ -94,40 +105,48 @@ cerveceria-usc/
 ## 📜 Scripts Disponibles
 
 ### Desarrollo
+
 - `npm run dev` - Inicia frontend y backend en modo desarrollo
 - `npm run dev:frontend` - Solo frontend
 - `npm run dev:backend` - Solo backend
 
 ### Build y Producción
+
 - `npm run build` - Construye ambos paquetes
 - `npm run build:frontend` - Construye solo frontend
 - `npm run build:backend` - Construye solo backend
 
 ### Testing
+
 - `npm test` - Ejecuta todos los tests
 - `npm run test:frontend` - Tests del frontend
 - `npm run test:backend` - Tests del backend
 
 ### Linting
+
 - `npm run lint` - Ejecuta linting en ambos paquetes
 - `npm run lint:fix` - Corrige automáticamente problemas de linting
 
 ### Base de Datos
+
 - `npm run db:migrate` - Ejecuta migraciones de Prisma
 - `npm run db:seed` - Ejecuta seeders
 - `npm run db:studio` - Abre Prisma Studio
 
 ### Docker
+
 - `npm run docker:up` - Inicia servicios (PostgreSQL + n8n)
 - `npm run docker:down` - Detiene servicios
 - `npm run docker:logs` - Muestra logs de contenedores
 
 ### Git
+
 - `npm run commit` - Commit interactivo con Conventional Commits
 
 ## 🔄 Flujo de Trabajo (Workflow)
 
 ### Estructura de Branches
+
 - `main` - Producción estable
 - `develop` - Desarrollo integrado
 - `feat/*` - Nuevas funcionalidades
@@ -135,6 +154,7 @@ cerveceria-usc/
 - `docs/*` - Actualizaciones de documentación
 
 ### Conventional Commits
+
 Este proyecto utiliza [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
@@ -148,6 +168,7 @@ chore: update dependencies
 ```
 
 ### Metodología P2P
+
 - **Bitácoras diarias**: Documentar progreso en `docs/p2p/`
 - **Peer Reviews**: Todos los PRs requieren revisión
 - **Pair Programming**: Sesiones colaborativas documentadas
@@ -155,18 +176,21 @@ chore: update dependencies
 ## 🏗️ Arquitectura
 
 ### Frontend (Vue.js)
+
 - **Composición API** - Patrón reactivo moderno
 - **Vue Router** - Navegación SPA
 - **Pinia** - Gestión de estado
 - **Axios** - Cliente HTTP
 
 ### Backend (Fastify)
+
 - **Arquitectura en capas** - Controladores, servicios, repositorios
 - **Autenticación JWT** - Seguridad stateless
 - **Validación de esquemas** - Fastify JSON Schema
 - **Documentación OpenAPI** - Swagger integrado
 
 ### Base de Datos
+
 - **PostgreSQL 16** - Base de datos principal
 - **Prisma Schema** - Definición de modelos
 - **Migraciones** - Control de versiones DB
@@ -174,6 +198,7 @@ chore: update dependencies
 ## 📋 ADRs (Architecture Decision Records)
 
 Las decisiones técnicas importantes se documentan en `docs/ADRs/`:
+
 - [ADR-001: Elección de Vue.js para Frontend](docs/ADRs/ADR-001-vue-frontend.md)
 - [ADR-002: Fastify como Framework Backend](docs/ADRs/ADR-002-fastify-backend.md)
 - [ADR-003: Prisma como ORM](docs/ADRs/ADR-003-prisma-orm.md)
@@ -187,6 +212,7 @@ Las decisiones técnicas importantes se documentan en `docs/ADRs/`:
 5. Abre un Pull Request
 
 ### Guidelines
+
 - Seguir [Conventional Commits](https://www.conventionalcommits.org/)
 - Mantener cobertura de tests > 80%
 - Documentar cambios en ADRs si es necesario
@@ -195,6 +221,7 @@ Las decisiones técnicas importantes se documentan en `docs/ADRs/`:
 ## 📊 CI/CD
 
 GitHub Actions automatiza:
+
 - ✅ **Linting** y formato de código
 - 🧪 **Tests** unitarios y de integración
 - 🏗️ **Build** de ambos paquetes
@@ -204,10 +231,12 @@ GitHub Actions automatiza:
 ## 📝 Documentación P2P
 
 ### Bitácoras Diarias
+
 - Registrar en `docs/p2p/daily-logs/YYYY-MM-DD.md`
 - Incluir: objetivos, progreso, blockers, aprendizajes
 
 ### Evidencia de Colaboración
+
 - Screenshots de pair programming
 - Registros de code reviews
 - Comunicación del equipo
@@ -215,6 +244,7 @@ GitHub Actions automatiza:
 ## 🐛 Reportar Issues
 
 Usa nuestros templates:
+
 - [🐛 Bug Report](.github/ISSUE_TEMPLATE/bug.md)
 - [✨ Feature Request](.github/ISSUE_TEMPLATE/feature.md)
 
@@ -224,8 +254,8 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 
 ## 👥 Equipo
 
-- **Desarrollador 1** - [@usuario1](https://github.com/usuario1)
-- **Desarrollador 2** - [@usuario2](https://github.com/usuario2)
+- **Lead Developer** - [@Marmo03](https://github.com/Marmo03)
+- **Desarrollador 2** - [@colaborador](https://github.com/colaborador)
 
 ---
 

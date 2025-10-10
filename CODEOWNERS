@@ -2,51 +2,51 @@
 # Este archivo define quién es responsable de revisar cambios en diferentes partes del código
 
 # Global - Requiere aprobación de al menos un propietario por defecto
-* @tu-usuario
+* @Marmo03
 
 # Documentación - Todos pueden revisar documentación
-*.md @tu-usuario
-docs/ @tu-usuario
+*.md @Marmo03
+docs/ @Marmo03
 
 # Frontend - Especialistas en Vue.js
-packages/frontend/ @tu-usuario @frontend-lead
-packages/frontend/src/components/ @tu-usuario @frontend-lead
-packages/frontend/src/views/ @tu-usuario @frontend-lead
+packages/frontend/ @Marmo03 @frontend-lead
+packages/frontend/src/components/ @Marmo03 @frontend-lead
+packages/frontend/src/views/ @Marmo03 @frontend-lead
 
 # Backend - Especialistas en Fastify/Prisma
-packages/backend/ @tu-usuario @backend-lead
-packages/backend/src/controllers/ @tu-usuario @backend-lead
-packages/backend/src/services/ @tu-usuario @backend-lead
-packages/backend/prisma/ @tu-usuario @backend-lead @database-admin
+packages/backend/ @Marmo03 @backend-lead
+packages/backend/src/controllers/ @Marmo03 @backend-lead
+packages/backend/src/services/ @Marmo03 @backend-lead
+packages/backend/prisma/ @Marmo03 @backend-lead @database-admin
 
 # Base de datos - Cambios críticos requieren revisión adicional
-packages/backend/prisma/schema.prisma @tu-usuario @backend-lead @database-admin
-packages/backend/prisma/migrations/ @tu-usuario @backend-lead @database-admin
+packages/backend/prisma/schema.prisma @Marmo03 @backend-lead @database-admin
+packages/backend/prisma/migrations/ @Marmo03 @backend-lead @database-admin
 
 # Infraestructura - DevOps y configuración
-infra/ @tu-usuario @devops-lead
-docker-compose.yml @tu-usuario @devops-lead
-Dockerfile @tu-usuario @devops-lead
+infra/ @Marmo03 @devops-lead
+docker-compose.yml @Marmo03 @devops-lead
+Dockerfile @Marmo03 @devops-lead
 
 # CI/CD y GitHub Actions
-.github/ @tu-usuario @devops-lead
-.github/workflows/ @tu-usuario @devops-lead
+.github/ @Marmo03 @devops-lead
+.github/workflows/ @Marmo03 @devops-lead
 
 # Configuración de desarrollo
-package.json @tu-usuario
-*/package.json @tu-usuario
-.husky/ @tu-usuario
-.eslintrc* @tu-usuario
-.prettierrc* @tu-usuario
-tsconfig.json @tu-usuario
+package.json @Marmo03
+*/package.json @Marmo03
+.husky/ @Marmo03
+.eslintrc* @Marmo03
+.prettierrc* @Marmo03
+tsconfig.json @Marmo03
 
 # Metodología P2P
-docs/p2p/ @tu-usuario @metodologia-lead
+docs/p2p/ @Marmo03 @metodologia-lead
 
 # ADRs - Decisiones arquitectónicas importantes
-docs/ADRs/ @tu-usuario @arquitecto-lead
+docs/ADRs/ @Marmo03 @arquitecto-lead
 
 # Configuración de herramientas
-.vscode/ @tu-usuario
-.gitignore @tu-usuario
-README.md @tu-usuario
+.vscode/ @Marmo03
+.gitignore @Marmo03
+README.md @Marmo03
