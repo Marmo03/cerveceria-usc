@@ -75,6 +75,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // Validar entrada
       const { email, password } = loginSchema.parse(request.body)
 
+      fastify.log.info(`Intento de login para: ${email}`)
+
       // Buscar usuario en base de datos
       const user = await fastify.prisma.user.findUnique({
         where: { email },
@@ -83,21 +85,37 @@ export default async function authRoutes(fastify: FastifyInstance) {
         },
       })
 
-      if (!user || !user.isActive) {
+      if (!user) {
+        fastify.log.warn(`Usuario no encontrado: ${email}`)
         return reply.status(401).send({
           success: false,
           message: 'Credenciales inválidas',
         })
       }
 
-      // Verificar password
-      const passwordMatch = await bcrypt.compare(password, user.password)
-      if (!passwordMatch) {
+      if (!user.isActive) {
+        fastify.log.warn(`Usuario inactivo: ${email}`)
         return reply.status(401).send({
           success: false,
           message: 'Credenciales inválidas',
         })
       }
+
+      fastify.log.info(`Usuario encontrado: ${user.email}, verificando password...`)
+
+      // Verificar password
+      const passwordMatch = await bcrypt.compare(password, user.password)
+      
+      if (!passwordMatch) {
+        fastify.log.warn(`Password incorrecto para: ${email}`)
+        fastify.log.warn(`Password hash en DB: ${user.password}`)
+        return reply.status(401).send({
+          success: false,
+          message: 'Credenciales inválidas',
+        })
+      }
+
+      fastify.log.info(`Login exitoso para: ${email}`)
 
       // Generar token JWT
       const token = fastify.jwt.sign({
@@ -118,7 +136,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
           role: {
             id: user.role.id,
             name: user.role.name,
-            permissions: user.role.permissions,
+            permissions: JSON.parse(user.role.permissions || '{}'),
           },
         },
       })
@@ -268,7 +286,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
           role: {
             id: user.role.id,
             name: user.role.name,
-            permissions: user.role.permissions,
+            permissions: JSON.parse(user.role.permissions || '{}'),
           },
         },
       })

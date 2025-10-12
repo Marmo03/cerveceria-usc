@@ -8,65 +8,65 @@ async function main() {
 
   // Crear roles
   const adminRole = await prisma.role.upsert({
-    where: { name: 'Admin' },
+    where: { name: 'ADMIN' },
     update: {},
     create: {
-      name: 'Admin',
+      name: 'ADMIN',
       description: 'Administrador del sistema con todos los permisos',
-      permissions: {
+      permissions: JSON.stringify({
         users: ['create', 'read', 'update', 'delete'],
         products: ['create', 'read', 'update', 'delete'],
         inventory: ['create', 'read', 'update', 'delete'],
         sales: ['create', 'read', 'update', 'delete', 'approve'],
         reports: ['read'],
         imports: ['create', 'read'],
-      },
+      }),
     },
   })
 
   const operarioRole = await prisma.role.upsert({
-    where: { name: 'Operario' },
+    where: { name: 'OPERARIO' },
     update: {},
     create: {
-      name: 'Operario',
+      name: 'OPERARIO',
       description: 'Operario con permisos básicos',
-      permissions: {
+      permissions: JSON.stringify({
         products: ['read'],
         inventory: ['create', 'read', 'update'],
         sales: ['create', 'read'],
         reports: ['read'],
-      },
+      }),
     },
   })
 
   const aprobadorRole = await prisma.role.upsert({
-    where: { name: 'Aprobador' },
+    where: { name: 'APROBADOR' },
     update: {},
     create: {
-      name: 'Aprobador',
+      name: 'APROBADOR',
       description: 'Aprobador de ventas e inventario',
-      permissions: {
+      permissions: JSON.stringify({
         products: ['read'],
         inventory: ['read', 'approve'],
         sales: ['read', 'approve'],
         reports: ['read'],
-      },
+      }),
     },
   })
 
   const analistaRole = await prisma.role.upsert({
-    where: { name: 'Analista' },
+    where: { name: 'ANALISTA' },
     update: {},
     create: {
-      name: 'Analista',
+      name: 'ANALISTA',
       description: 'Analista de datos y reportes',
-      permissions: {
+      permissions: JSON.stringify({
         products: ['read'],
         inventory: ['read'],
         sales: ['read'],
         reports: ['read', 'create'],
         imports: ['read'],
-      },
+      }),
     },
   })
 
@@ -77,8 +77,8 @@ async function main() {
     analista: analistaRole.id,
   })
 
-  // Crear usuario administrador por defecto
-  const hashedPassword = await bcrypt.hash('admin123', 12)
+  // Crear usuarios de prueba
+  const hashedPassword = await bcrypt.hash('123456', 12)
   
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@cerveceria-usc.edu.co' },
@@ -92,41 +92,82 @@ async function main() {
     },
   })
 
-  console.log('✅ Usuario administrador creado:', adminUser.email)
+  const operarioUser = await prisma.user.upsert({
+    where: { email: 'operario@cerveceria-usc.edu.co' },
+    update: {},
+    create: {
+      email: 'operario@cerveceria-usc.edu.co',
+      password: hashedPassword,
+      firstName: 'Juan',
+      lastName: 'Pérez',
+      roleId: operarioRole.id,
+    },
+  })
+
+  const aprobadorUser = await prisma.user.upsert({
+    where: { email: 'aprobador@cerveceria-usc.edu.co' },
+    update: {},
+    create: {
+      email: 'aprobador@cerveceria-usc.edu.co',
+      password: hashedPassword,
+      firstName: 'María',
+      lastName: 'García',
+      roleId: aprobadorRole.id,
+    },
+  })
+
+  const analistaUser = await prisma.user.upsert({
+    where: { email: 'analista@cerveceria-usc.edu.co' },
+    update: {},
+    create: {
+      email: 'analista@cerveceria-usc.edu.co',
+      password: hashedPassword,
+      firstName: 'Carlos',
+      lastName: 'López',
+      roleId: analistaRole.id,
+    },
+  })
+
+  console.log('✅ Usuarios creados:', {
+    admin: adminUser.email,
+    operario: operarioUser.email,
+    aprobador: aprobadorUser.email,
+    analista: analistaUser.email,
+  })
 
   // Crear productos de ejemplo
   const products = [
     {
       sku: 'CERV-001',
-      name: 'Cerveza Artesanal IPA',
-      description: 'Cerveza artesanal estilo India Pale Ale',
-      unitPrice: 8500,
-      initialStock: 100,
-      currentStock: 100,
-      minStock: 20,
+      nombre: 'Cerveza Artesanal IPA',
+      categoria: 'Producto Terminado',
+      unidad: 'L',
+      stockActual: 100,
+      stockMin: 20,
+      costo: 8500,
     },
     {
-      sku: 'CERV-002',
-      name: 'Cerveza Artesanal Lager',
-      description: 'Cerveza artesanal estilo Lager',
-      unitPrice: 7500,
-      initialStock: 150,
-      currentStock: 150,
-      minStock: 30,
+      sku: 'CERV-002', 
+      nombre: 'Cerveza Artesanal Lager',
+      categoria: 'Producto Terminado',
+      unidad: 'L',
+      stockActual: 150,
+      stockMin: 30,
+      costo: 7500,
     },
     {
       sku: 'CERV-003',
-      name: 'Cerveza Artesanal Stout',
-      description: 'Cerveza artesanal estilo Stout',
-      unitPrice: 9000,
-      initialStock: 80,
-      currentStock: 80,
-      minStock: 15,
+      nombre: 'Cerveza Artesanal Stout',
+      categoria: 'Producto Terminado',
+      unidad: 'L',
+      stockActual: 80,
+      stockMin: 15,
+      costo: 9000,
     },
   ]
 
   for (const productData of products) {
-    await prisma.product.upsert({
+    await prisma.producto.upsert({
       where: { sku: productData.sku },
       update: {},
       create: productData,

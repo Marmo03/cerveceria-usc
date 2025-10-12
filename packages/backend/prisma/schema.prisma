@@ -1,21 +1,23 @@
-// Schema de Prisma para Cervecería USC
-// Generado para Node.js con cliente TypeScript
+// Schema de Prisma para Cervecería USC - Plataforma RPA
+// Arquitectura de dominios: Inventario, Reabastecimiento, Aprobaciones, KPIs
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
-// Tabla de Roles del sistema
+// ===== DOMINIO DE USUARIOS Y ROLES =====
+
+// Tabla de Roles del sistema (Admin, Operario, Aprobador, Analista)
 model Role {
   id          String   @id @default(cuid())
-  name        String   @unique // Admin, Operario, Aprobador, Analista
+  name        String   @unique
   description String?
-  permissions Json     // Permisos específicos del rol
+  permissions String   // JSON como String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -38,138 +40,180 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relaciones
-  role              Role               @relation(fields: [roleId], references: [id])
-  sales             Sale[]
-  inventoryMovements InventoryMovement[]
-  importJobs        ImportJob[]
+  role                    Role                      @relation(fields: [roleId], references: [id])
+  inventoryMovements      MovimientoInventario[]
+  solicitudesCreadas      SolicitudCompra[]         @relation("SolicitudCreador")
+  aprobacionesAsignadas   SolicitudCompra[]         @relation("AprobadorActual")
+  aprobaciones            Aprobacion[]
+  importaciones           Importacion[]
 
   @@map("users")
 }
 
-// Tabla de Productos
-model Product {
-  id          String   @id @default(cuid())
-  sku         String   @unique // SKU único del producto
-  name        String
-  description String?
-  unitPrice   Decimal  @db.Decimal(10, 2)
-  initialStock Int     @default(0)
-  currentStock Int     @default(0)
-  minStock     Int     @default(0) // Para alertas de stock bajo
+// ===== DOMINIO DE PRODUCTOS E INVENTARIO =====
+
+// Tabla de Proveedores
+model Proveedor {
+  id        String   @id @default(cuid())
+  nombre    String
+  contacto  String?
+  email     String?
+  telefono  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  productos Producto[]
+
+  @@map("proveedores")
+}
+
+// Tabla de Productos (entidad principal del dominio)
+model Producto {
+  id           String   @id @default(cuid())
+  sku          String   @unique // SKU único del producto
+  nombre       String
+  categoria    String   // Categoría del producto
+  unidad       String   // Unidad de medida (L, KG, Unidades, etc.)
+  proveedorId  String?
+  stockActual  Int      @default(0)
+  stockMin     Int      @default(0) // Stock mínimo para alertas
+  leadTime     Int      @default(7) // Tiempo de entrega en días
+  costo        Float
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   // Relaciones
-  saleItems          SaleItem[]
-  inventoryMovements InventoryMovement[]
+  proveedor              Proveedor?              @relation(fields: [proveedorId], references: [id])
+  movimientos            MovimientoInventario[]
+  politicaAbastecimiento PoliticaAbastecimiento?
+  solicitudesCompra      SolicitudCompra[]
 
-  @@map("products")
+  @@map("productos")
 }
 
-// Tabla de Ventas
-model Sale {
-  id           String    @id @default(cuid())
-  saleNumber   String    @unique // Número de venta generado
-  customerName String?   // Nombre del cliente (opcional)
-  saleDate     DateTime  @default(now())
-  totalAmount  Decimal   @db.Decimal(10, 2)
-  status       SaleStatus @default(PENDING)
-  notes        String?
-  userId       String    // Usuario que registró la venta
-  approvedBy   String?   // Usuario que aprobó (si aplica)
-  approvedAt   DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+// Tabla de Movimientos de Inventario (eventos de entrada/salida)
+model MovimientoInventario {
+  id         String   @id @default(cuid())
+  productoId String
+  tipo       String   // "ENTRADA" | "SALIDA"
+  cantidad   Int
+  fecha      DateTime @default(now())
+  usuarioId  String
+  comentario String?
+  referencia String?  // Referencia externa (ej: número de solicitud)
+  createdAt  DateTime @default(now())
 
   // Relaciones
-  user      User       @relation(fields: [userId], references: [id])
-  saleItems SaleItem[]
-  importJob ImportJob? @relation(fields: [importJobId], references: [id])
-  importJobId String?
+  producto Producto @relation(fields: [productoId], references: [id])
+  usuario  User     @relation(fields: [usuarioId], references: [id])
 
-  @@map("sales")
+  @@map("movimientos_inventario")
 }
 
-// Tabla de Items de Venta (detalle de cada venta)
-model SaleItem {
-  id        String  @id @default(cuid())
-  saleId    String
-  productId String
-  quantity  Int
-  unitPrice Decimal @db.Decimal(10, 2)
-  subtotal  Decimal @db.Decimal(10, 2)
-  createdAt DateTime @default(now())
+// ===== DOMINIO DE REABASTECIMIENTO =====
+
+// Tabla de Políticas de Abastecimiento (Strategy Pattern)
+model PoliticaAbastecimiento {
+  id              String   @id @default(cuid())
+  productoId      String   @unique
+  estrategia      String   @default("MANUAL") // "EOQ" | "MANUAL"
+  rop             Int      @default(0)        // Reorder Point
+  stockSeguridad  Int      @default(0)        // Stock de seguridad
+  parametrosJSON  String?  // JSON como String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relaciones
-  sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
 
-  @@map("sale_items")
+  @@map("politicas_abastecimiento")
 }
 
-// Tabla de Movimientos de Inventario
-model InventoryMovement {
-  id          String      @id @default(cuid())
-  productId   String
-  movementType MovementType
-  quantity    Int         // Positivo para entrada, negativo para salida
-  previousStock Int
-  newStock    Int
-  reason      String      // Descripción del motivo del movimiento
-  reference   String?     // Referencia externa (ej: número de venta)
-  userId      String
-  createdAt   DateTime    @default(now())
+// Tabla de Solicitudes de Compra (Chain of Responsibility)
+model SolicitudCompra {
+  id                String   @id @default(cuid())
+  productoId        String
+  cantidad          Int
+  estado            String   @default("BORRADOR") // "BORRADOR" | "EN_APROBACION" | etc.
+  creadorId         String
+  aprobadorActualId String?
+  historialJSON     String?  // JSON como String
+  fechaCreacion     DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
 
   // Relaciones
-  product Product @relation(fields: [productId], references: [id])
-  user    User    @relation(fields: [userId], references: [id])
+  producto         Producto    @relation(fields: [productoId], references: [id])
+  creador          User        @relation("SolicitudCreador", fields: [creadorId], references: [id])
+  aprobadorActual  User?       @relation("AprobadorActual", fields: [aprobadorActualId], references: [id])
+  aprobaciones     Aprobacion[]
 
-  @@map("inventory_movements")
+  @@map("solicitudes_compra")
 }
 
-// Tabla de Jobs de Importación
-model ImportJob {
-  id          String      @id @default(cuid())
-  fileName    String      // Nombre del archivo importado
-  fileType    String      // CSV, XLSX, etc.
-  status      ImportStatus @default(PENDING)
-  totalRows   Int         @default(0)
-  processedRows Int       @default(0)
-  errorRows   Int         @default(0)
-  errors      Json?       // Errores detallados de la importación
-  userId      String
-  startedAt   DateTime    @default(now())
-  completedAt DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+// Tabla de Aprobaciones (parte del Chain of Responsibility)
+model Aprobacion {
+  id           String   @id @default(cuid())
+  solicitudId  String
+  nivel        Int      // Nivel de aprobación (1, 2, 3...)
+  aprobadorId  String
+  estado       String   @default("PENDIENTE") // "PENDIENTE" | "APROBADA" | "RECHAZADA"
+  comentario   String?
+  fecha        DateTime @default(now())
 
   // Relaciones
-  user  User   @relation(fields: [userId], references: [id])
-  sales Sale[]
+  solicitud  SolicitudCompra @relation(fields: [solicitudId], references: [id])
+  aprobador  User            @relation(fields: [aprobadorId], references: [id])
 
-  @@map("import_jobs")
+  @@map("aprobaciones")
 }
 
-// Enums para estados y tipos
-enum SaleStatus {
-  PENDING     // Pendiente de aprobación
-  APPROVED    // Aprobada
-  REJECTED    // Rechazada
-  CANCELLED   // Cancelada
+// ===== DOMINIO DE KPIs E INDICADORES =====
+
+// Tabla de Indicadores (Observer Pattern para métricas)
+model Indicador {
+  id           String   @id @default(cuid())
+  tipo         String   // "ROTACION_INVENTARIO" | "FILL_RATE" | etc.
+  periodo      String   // "2024-10", "2024-Q3", etc.
+  valor        Float
+  metadataJSON String?  // JSON como String
+  fechaCalculo DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@map("indicadores")
 }
 
-enum MovementType {
-  ENTRY       // Entrada de inventario
-  EXIT        // Salida de inventario
-  ADJUSTMENT  // Ajuste de inventario
-  SALE        // Salida por venta
+// ===== DOMINIO DE IMPORTACIONES =====
+
+// Tabla de Importaciones (procesamiento de archivos CSV)
+model Importacion {
+  id           String   @id @default(cuid())
+  tipo         String   // "VENTAS" | "STOCK" | "PRODUCTOS"
+  estado       String   @default("PENDIENTE") // "PENDIENTE" | "PROCESANDO" | etc.
+  archivo      String   // Nombre del archivo
+  resumenJSON  String?  // JSON como String
+  erroresJSON  String?  // JSON como String
+  usuarioId    String
+  fechaInicio  DateTime @default(now())
+  fechaFin     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relaciones
+  usuario User @relation(fields: [usuarioId], references: [id])
+
+  @@map("importaciones")
 }
 
-enum ImportStatus {
-  PENDING     // En espera
-  PROCESSING  // Procesando
-  COMPLETED   // Completado exitosamente
-  FAILED      // Falló
-  PARTIAL     // Completado con errores
-}
+// ===== CONSTANTES (Reemplazando enums para SQLite) =====
+// RoleName: "ADMIN" | "OPERARIO" | "APROBADOR" | "ANALISTA"
+// TipoMovimiento: "ENTRADA" | "SALIDA"
+// EstrategiaReposicion: "EOQ" | "MANUAL"
+// EstadoSolicitud: "BORRADOR" | "EN_APROBACION" | "APROBADA" | "RECHAZADA" | "CANCELADA"
+// EstadoAprobacion: "PENDIENTE" | "APROBADA" | "RECHAZADA"
+// TipoIndicador: "ROTACION_INVENTARIO" | "FILL_RATE" | "TIEMPO_CICLO" | "NIVEL_SERVICIO" | "BACKORDERS" | "COSTO_INVENTARIO"
+// TipoImportacion: "VENTAS" | "STOCK" | "PRODUCTOS"
+// EstadoImportacion: "PENDIENTE" | "PROCESANDO" | "COMPLETADA" | "FALLIDA" | "PARCIAL"
+
