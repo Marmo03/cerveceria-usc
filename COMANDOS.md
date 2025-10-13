@@ -1,6 +1,6 @@
 # 🍺 Cervecería USC - Comandos Útiles
 
-Una referencia rápida de comandos más utilizados durante el desarrollo.
+Una referencia rápida de comandos más utilizados durante el desarrollo de la plataforma de cadena de suministro.
 
 ## 🚀 **Setup Inicial (Solo una vez)**
 

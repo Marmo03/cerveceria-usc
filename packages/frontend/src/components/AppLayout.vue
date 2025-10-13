@@ -6,22 +6,26 @@
       :class="{ '-translate-x-full': !sidebarOpen }"
     >
       <!-- Logo -->
-      <div class="flex items-center h-16 px-6 bg-blue-600">
-        <div class="flex items-center">
+      <div class="flex items-center h-16 px-4 bg-blue-600">
+        <div class="flex items-center w-full">
           <div
-            class="h-8 w-8 bg-white rounded-full flex items-center justify-center mr-3"
+            class="h-8 w-8 bg-white rounded-full flex items-center justify-center mr-3 flex-shrink-0"
           >
             <svg
               class="h-5 w-5 text-blue-600"
               fill="currentColor"
-              viewBox="0 0 20 20"
+              viewBox="0 0 24 24"
             >
               <path
-                d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"
+                d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1zM10 6a2 2 0 0 1 4 0v1h-4V6zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10z"
               />
+              <path d="M12 12a1 1 0 0 0-1 1v2a1 1 0 0 0 2 0v-2a1 1 0 0 0-1-1z"/>
             </svg>
           </div>
-          <span class="text-xl font-bold text-white">Cervecería USC</span>
+          <div class="flex flex-col min-w-0">
+            <span class="text-lg font-bold text-white truncate">Cervecería USC</span>
+            <span class="text-xs text-blue-100 truncate">Cadena de Suministro</span>
+          </div>
         </div>
       </div>
 
@@ -201,11 +205,11 @@
     ></div>
 
     <!-- Main content -->
-    <div class="flex-1 flex flex-col lg:pl-0">
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
       <!-- Top bar -->
       <header class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
-        <div class="px-4 sm:px-6 lg:px-8">
-          <div class="flex items-center justify-between h-16">
+        <div class="px-4 sm:px-6 lg:px-8 max-w-full">
+          <div class="flex items-center justify-between h-16 min-w-0">
             <!-- Menu button para móviles -->
             <button
               @click="sidebarOpen = !sidebarOpen"
@@ -227,19 +231,19 @@
             </button>
 
             <!-- Breadcrumb -->
-            <nav class="hidden lg:flex">
-              <ol class="flex items-center space-x-2">
-                <li>
+            <nav class="hidden lg:flex flex-1 min-w-0">
+              <ol class="flex items-center space-x-2 min-w-0">
+                <li class="flex-shrink-0">
                   <router-link
                     to="/dashboard"
-                    class="text-gray-400 hover:text-gray-500"
+                    class="text-gray-400 hover:text-gray-500 text-sm"
                   >
                     Dashboard
                   </router-link>
                 </li>
-                <li v-if="$route.name !== 'Dashboard'">
+                <li v-if="$route.name !== 'Dashboard'" class="flex items-center min-w-0">
                   <svg
-                    class="flex-shrink-0 h-5 w-5 text-gray-300"
+                    class="flex-shrink-0 h-4 w-4 text-gray-300 mx-2"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -249,17 +253,17 @@
                       clip-rule="evenodd"
                     />
                   </svg>
-                  <span class="ml-2 text-gray-500">{{ $route.name }}</span>
+                  <span class="text-gray-500 text-sm truncate">{{ $route.name }}</span>
                 </li>
               </ol>
             </nav>
 
             <!-- User menu -->
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 flex-shrink-0">
               <!-- Notificaciones -->
-              <button class="p-2 text-gray-400 hover:text-gray-500">
+              <button class="p-2 text-gray-400 hover:text-gray-500 hidden sm:block">
                 <svg
-                  class="h-6 w-6"
+                  class="h-5 w-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -277,21 +281,20 @@
               <div class="relative">
                 <button
                   @click="userMenuOpen = !userMenuOpen"
-                  class="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  class="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs"
                 >
                   <div
-                    class="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center"
+                    class="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0"
                   >
-                    <span class="text-white font-medium">
-                      {{ authStore.user?.firstName.charAt(0)
-                      }}{{ authStore.user?.lastName.charAt(0) }}
+                    <span class="text-white font-medium text-xs">
+                      {{ authStore.user?.firstName?.charAt(0) || '' }}{{ authStore.user?.lastName?.charAt(0) || '' }}
                     </span>
                   </div>
-                  <span class="ml-3 text-gray-700 font-medium hidden sm:block">
+                  <span class="ml-2 text-gray-700 font-medium hidden md:block truncate max-w-24">
                     {{ authStore.fullName }}
                   </span>
                   <svg
-                    class="ml-2 h-4 w-4 text-gray-400"
+                    class="ml-1 h-4 w-4 text-gray-400 flex-shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -336,8 +339,10 @@
       </header>
 
       <!-- Page content -->
-      <main class="flex-1 py-4 px-4 sm:px-6 lg:px-8 page-container">
-        <slot />
+      <main class="flex-1 overflow-hidden">
+        <div class="h-full overflow-y-auto px-4 py-4 sm:px-6 lg:px-8 page-container container-responsive">
+          <slot />
+        </div>
       </main>
     </div>
   </div>

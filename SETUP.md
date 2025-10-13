@@ -1,6 +1,6 @@
 # 🍺 Cervecería USC - Guía de Setup
 
-Sistema de gestión de inventario RPA para Cervecería USC con arquitectura hexagonal y frontend Vue.js.
+Sistema completo de gestión de cadena de suministro para Cervecería USC con automatización RPA, arquitectura hexagonal y frontend Vue.js moderno.
 
 ## 🚀 Setup Rápido para Colaboradores
 
@@ -152,14 +152,14 @@ rm -rf node_modules packages/*/node_modules
 npm install
 ```
 
-## 📚 Funcionalidades Principales
+## 📚 Funcionalidades de Cadena de Suministro
 
-- 🔐 **Autenticación:** JWT con roles (Admin, Operario, Aprobador, Analista)
-- 📦 **Gestión de Productos:** CRUD completo con categorías
-- 📊 **Inventario:** Movimientos de entrada/salida, alertas de stock
-- 📝 **Solicitudes:** Workflow de aprobación multinivel
-- 📈 **KPIs:** Dashboard con métricas e indicadores
-- 👤 **Perfil:** Gestión de usuario y configuración
+- 🔐 **Autenticación:** JWT con roles especializados (Admin, Operario, Aprobador, Analista)
+- 📦 **Catálogo de Productos:** Gestión completa de productos cerveceros con categorías y especificaciones
+- 📊 **Control de Inventario:** Movimientos de entrada/salida, alertas automáticas de reposición, trazabilidad completa
+- 📝 **Gestión de Compras:** Workflow automatizado de solicitudes y aprobaciones multinivel
+- 📈 **KPIs de Supply Chain:** Dashboard con métricas de rotación, fill rate, lead times y eficiencia
+- 👤 **Gestión de Usuarios:** Perfiles especializados para diferentes roles en la cadena de suministro
 
 ## 🏛️ Patrones de Diseño Implementados
 

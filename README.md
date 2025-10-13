@@ -1,13 +1,13 @@
-# 🍺 Cervecería USC - Plataforma RPA
+# 🍺 Cervecería USC - Plataforma de Cadena de Suministro
 
-**Sistema completo de gestión de inventario con arquitectura hexagonal, Vue.js frontend y autenticación basada en roles.**
+**Sistema completo de gestión de cadena de suministro para Cervecería USC con arquitectura hexagonal, automatización RPA, Vue.js frontend y autenticación basada en roles.**
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![Vue.js](https://img.shields.io/badge/Vue.js-3-green.svg)](https://vuejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue.svg)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-ORM-blueviolet.svg)](https://www.prisma.io/)
 
-> **Estado Actual:** ✅ **Plataforma completa funcional** con backend hexagonal y frontend Vue.js implementados
+> **Estado Actual:** ✅ **Plataforma de cadena de suministro completa y funcional** con backend hexagonal, automatización RPA y frontend Vue.js implementados para optimizar los procesos de la Cervecería USC
 
 ---
 
@@ -84,14 +84,14 @@ cd packages/frontend && npm run dev
 | **APROBADOR** | Aprobar solicitudes, ver KPIs      | Dashboard, Solicitudes, KPIs, Perfil                  |
 | **ANALISTA**  | KPIs, reportes, políticas          | Dashboard, Productos, KPIs, Perfil                    |
 
-#### **📊 Módulos Disponibles**
+#### **📊 Módulos de Cadena de Suministro**
 
-- 🏠 **Dashboard:** Resumen general y métricas
-- 📦 **Productos:** CRUD de productos con categorías
-- 📊 **Inventario:** Movimientos, alertas de stock
-- 📝 **Solicitudes:** Workflow de aprobación multinivel
-- 📈 **KPIs:** Métricas e indicadores de rendimiento
-- 👤 **Perfil:** Gestión de usuario y configuración
+- 🏠 **Dashboard:** Resumen general de la cadena de suministro y métricas clave
+- 📦 **Productos:** Gestión completa del catálogo de productos cerveceros
+- 📊 **Inventario:** Control de stock, movimientos y alertas de reposición
+- 📝 **Solicitudes:** Workflow automatizado de compras y aprobaciones
+- 📈 **KPIs:** Indicadores de desempeño de la cadena de suministro
+- 👤 **Perfil:** Gestión de usuarios y configuración del sistema
 
 ### **🔑 Usuarios de Prueba**
 
