@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reset y estilos base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 0;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  scroll-margin-top: 0;
+}
+
+#app {
+  min-height: 100vh;
+  background: #f8fafc;
+  scroll-behavior: smooth;
+}
+
 /* Estilos personalizados */
 .btn-primary {
   @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
@@ -121,4 +145,24 @@
 
 .table-cell {
   @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
+}
+
+/* Fix para el layout y scroll */
+.page-container {
+  scroll-margin-top: 0;
+  scroll-padding-top: 0;
+}
+
+/* Asegurar que el main content empiece desde arriba */
+main {
+  position: relative;
+  top: 0;
+  scroll-margin-top: 0;
+}
+
+/* Fix para responsive layout */
+@media (min-width: 1024px) {
+  .main-content {
+    margin-left: 256px; /* 16rem = w-64 del sidebar */
+  }
 }

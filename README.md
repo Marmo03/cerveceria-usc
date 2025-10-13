@@ -1,264 +1,500 @@
-# Cervecería USC 🍺
+# 🍺 Cervecería USC - Plataforma RPA
 
-Sistema de gestión integral para Cervecería USC - Proyecto universitario desarrollado con tecnologías modernas.
+**Sistema completo de gestión de inventario con arquitectura hexagonal, Vue.js frontend y autenticación basada en roles.**
 
-## 🛠️ Stack Tecnológico
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![Vue.js](https://img.shields.io/badge/Vue.js-3-green.svg)](https://vuejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue.svg)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-blueviolet.svg)](https://www.prisma.io/)
 
-### Frontend
+> **Estado Actual:** ✅ **Plataforma completa funcional** con backend hexagonal y frontend Vue.js implementados
 
-- **Vue.js 3** - Framework progresivo de JavaScript
-- **Vite** - Build tool rápido y moderno
-- **TypeScript** - Tipado estático para JavaScript
+---
 
-### Backend
+## 🚀 **Setup Rápido (5 minutos)**
 
-- **Fastify** - Framework web rápido y eficiente
-- **Prisma** - ORM moderno para Node.js
-- **PostgreSQL 16** - Base de datos relacional
+```bash
+# 1. Clonar repositorio
+git clone https://github.com/Marmo03/cerveceria-usc.git
+cd cerveceria-usc
+git checkout feat/fullstack-bootstrap
 
-### Automatización
+# 2. Instalar dependencias
+npm install
 
-- **n8n** - Plataforma de automatización RPA
-- **Docker** - Containerización de servicios
+# 3. Configurar base de datos
+cd packages/backend
+npx prisma migrate dev --name init
+npm run db:seed
 
-### Metodología
+# 4. Ejecutar aplicación (2 terminales)
+# Terminal 1:
+cd packages/backend && npm run dev
 
-- **P2P (Peer-to-Peer)** - Metodología de desarrollo colaborativo
-- **ADRs** - Architecture Decision Records para documentar decisiones técnicas
+# Terminal 2:
+cd packages/frontend && npm run dev
+```
 
-## 📁 Estructura del Proyecto
+**🌐 Acceder:** http://localhost:5173
+
+## 🛠️ **Stack Tecnológico Implementado**
+
+### **Backend (Arquitectura Hexagonal)**
+
+- **Node.js + Fastify** - API REST con TypeScript
+- **Prisma ORM** - Gestión de base de datos SQLite
+- **JWT Authentication** - Autenticación con refresh tokens
+- **Bcrypt** - Hashing seguro de contraseñas
+- **Vitest** - Framework de testing con Given-When-Then
+
+### **Frontend (Vue.js SPA)**
+
+- **Vue.js 3 + TypeScript** - Framework progresivo moderno
+- **Vite** - Build tool ultrarrápido
+- **Pinia** - Gestión de estado reactivo
+- **Vue Router** - Navegación con guards de autenticación
+- **TailwindCSS** - Framework CSS utility-first
+- **Axios** - Cliente HTTP con interceptors
+
+### **Base de Datos**
+
+- **SQLite** - Base de datos embebida (desarrollo)
+- **Prisma Schema** - Modelado de datos type-safe
+- **Migraciones** - Control de versiones de esquema
+- **Seed Data** - Datos de prueba pre-poblados
+
+### **Patrones de Diseño**
+
+- 🏗️ **Hexagonal Architecture** - Independencia de frameworks
+- 🎯 **Strategy Pattern** - Algoritmos de reabastecimiento
+- ⛓️ **Chain of Responsibility** - Flujo de aprobaciones
+- 👁️ **Observer Pattern** - Sistema de eventos para KPIs
+- 📚 **Repository Pattern** - Abstracción de acceso a datos
+
+## 🎯 **Estado Actual del Proyecto**
+
+### ✅ **Completamente Implementado**
+
+#### **🔐 Sistema de Roles**
+
+| Rol           | Permisos                           | Páginas Accesibles                                    |
+| ------------- | ---------------------------------- | ----------------------------------------------------- |
+| **ADMIN**     | Todos los permisos                 | Todas las páginas                                     |
+| **OPERARIO**  | Inventario, productos, solicitudes | Dashboard, Productos, Inventario, Solicitudes, Perfil |
+| **APROBADOR** | Aprobar solicitudes, ver KPIs      | Dashboard, Solicitudes, KPIs, Perfil                  |
+| **ANALISTA**  | KPIs, reportes, políticas          | Dashboard, Productos, KPIs, Perfil                    |
+
+#### **📊 Módulos Disponibles**
+
+- 🏠 **Dashboard:** Resumen general y métricas
+- 📦 **Productos:** CRUD de productos con categorías
+- 📊 **Inventario:** Movimientos, alertas de stock
+- 📝 **Solicitudes:** Workflow de aprobación multinivel
+- 📈 **KPIs:** Métricas e indicadores de rendimiento
+- 👤 **Perfil:** Gestión de usuario y configuración
+
+### **🔑 Usuarios de Prueba**
+
+```javascript
+// Todos con password: "123456"
+admin@cerveceria-usc.edu.co      // Administrador completo
+operario@cerveceria-usc.edu.co   // Gestión operativa
+aprobador@cerveceria-usc.edu.co  // Aprobación de solicitudes
+analista@cerveceria-usc.edu.co   // Análisis y reportes
+```
+
+## 📁 **Estructura del Proyecto**
 
 ```
 cerveceria-usc/
 ├── packages/
-│   ├── frontend/          # Aplicación Vue.js
-│   └── backend/           # API Fastify + Prisma
-├── infra/
-│   ├── docker-compose.yml # PostgreSQL + n8n
-│   └── .env.example       # Variables de entorno
-├── docs/
-│   ├── p2p/              # Bitácoras metodología P2P
-│   └── ADRs/             # Architecture Decision Records
-├── .github/
-│   ├── workflows/        # GitHub Actions CI/CD
-│   ├── ISSUE_TEMPLATE/   # Templates para issues
-│   └── PULL_REQUEST_TEMPLATE.md
-└── CODEOWNERS           # Propietarios de código
+│   ├── backend/              # API Node.js + Fastify
+│   │   ├── prisma/           # Schema SQLite + migraciones
+│   │   ├── src/
+│   │   │   ├── domain/       # Lógica de negocio pura
+│   │   │   │   ├── entities.ts
+│   │   │   │   ├── repositories.ts
+│   │   │   │   ├── strategies/    # Strategy Pattern
+│   │   │   │   ├── approvals/     # Chain of Responsibility
+│   │   │   │   └── events/        # Observer Pattern
+│   │   │   ├── services/     # Casos de uso de aplicación
+│   │   │   ├── infra/        # Adaptadores de infraestructura
+│   │   │   ├── controllers/  # Controladores HTTP
+│   │   │   └── tests/        # Tests unitarios Given-When-Then
+│   │   └── ejemplos-csv/     # Datos de prueba para importación
+│   └── frontend/             # Aplicación Vue.js SPA
+│       ├── src/
+│       │   ├── pages/        # Páginas de la aplicación
+│       │   ├── components/   # Componentes reutilizables
+│       │   ├── stores/       # Estado global (Pinia)
+│       │   ├── router/       # Configuración de rutas + guards
+│       │   └── style.css     # Estilos globales + TailwindCSS
+│       └── public/
+├── docs/                     # Documentación del proyecto
+└── SETUP.md                 # Guía detallada para colaboradores
 ```
 
-## 🚀 Inicio Rápido
+## � **Guía para Colaboradores**
 
-### Prerrequisitos
+### **🌿 Workflow de Ramas**
 
-- Node.js >= 18.0.0
-- npm >= 9.0.0
-- Docker y Docker Compose
-- Git
-
-### Instalación
-
-1. **Clonar el repositorio**
-
-   ```bash
-   git clone https://github.com/Marmo03/cerveceria-usc.git
-   cd cerveceria-usc
-   ```
-
-2. **Instalar dependencias**
-
-   ```bash
-   npm install
-   ```
-
-3. **Configurar variables de entorno**
-
-   ```bash
-   cp infra/.env.example infra/.env
-   # Editar infra/.env con tus configuraciones
-   ```
-
-4. **Iniciar servicios de infraestructura**
-
-   ```bash
-   npm run docker:up
-   ```
-
-5. **Configurar base de datos**
-
-   ```bash
-   npm run db:migrate
-   npm run db:seed
-   ```
-
-6. **Iniciar modo desarrollo**
-   ```bash
-   npm run dev
-   ```
-
-### URLs de Desarrollo
-
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:3000
-- **n8n**: http://localhost:5678
-- **Prisma Studio**: http://localhost:5555
-
-## 📜 Scripts Disponibles
-
-### Desarrollo
-
-- `npm run dev` - Inicia frontend y backend en modo desarrollo
-- `npm run dev:frontend` - Solo frontend
-- `npm run dev:backend` - Solo backend
-
-### Build y Producción
-
-- `npm run build` - Construye ambos paquetes
-- `npm run build:frontend` - Construye solo frontend
-- `npm run build:backend` - Construye solo backend
-
-### Testing
-
-- `npm test` - Ejecuta todos los tests
-- `npm run test:frontend` - Tests del frontend
-- `npm run test:backend` - Tests del backend
-
-### Linting
-
-- `npm run lint` - Ejecuta linting en ambos paquetes
-- `npm run lint:fix` - Corrige automáticamente problemas de linting
-
-### Base de Datos
-
-- `npm run db:migrate` - Ejecuta migraciones de Prisma
-- `npm run db:seed` - Ejecuta seeders
-- `npm run db:studio` - Abre Prisma Studio
-
-### Docker
-
-- `npm run docker:up` - Inicia servicios (PostgreSQL + n8n)
-- `npm run docker:down` - Detiene servicios
-- `npm run docker:logs` - Muestra logs de contenedores
-
-### Git
-
-- `npm run commit` - Commit interactivo con Conventional Commits
-
-## 🔄 Flujo de Trabajo (Workflow)
-
-### Estructura de Branches
-
-- `main` - Producción estable
-- `develop` - Desarrollo integrado
-- `feat/*` - Nuevas funcionalidades
-- `fix/*` - Correcciones de bugs
-- `docs/*` - Actualizaciones de documentación
-
-### Conventional Commits
-
-Este proyecto utiliza [Conventional Commits](https://www.conventionalcommits.org/):
+#### **Estructura de Ramas**
 
 ```
-feat: add user authentication system
-fix: resolve database connection timeout
-docs: update API documentation
-style: format code with prettier
-refactor: restructure user service
-test: add unit tests for auth module
-chore: update dependencies
+main                     # Rama principal (protegida)
+└── feat/fullstack-bootstrap  # Rama de desarrollo actual ✅
+    ├── feature/nueva-funcionalidad
+    ├── fix/correccion-bug
+    └── refactor/mejora-codigo
 ```
 
-### Metodología P2P
+#### **Para Nuevas Funcionalidades**
 
-- **Bitácoras diarias**: Documentar progreso en `docs/p2p/`
-- **Peer Reviews**: Todos los PRs requieren revisión
-- **Pair Programming**: Sesiones colaborativas documentadas
+```bash
+# 1. Actualizar rama base
+git checkout feat/fullstack-bootstrap
+git pull origin feat/fullstack-bootstrap
 
-## 🏗️ Arquitectura
+# 2. Crear rama de feature
+git checkout -b feature/nombre-funcionalidad
 
-### Frontend (Vue.js)
+# 3. Desarrollar y hacer commits
+git add .
+git commit -m "feat: descripción de la funcionalidad"
 
-- **Composición API** - Patrón reactivo moderno
-- **Vue Router** - Navegación SPA
-- **Pinia** - Gestión de estado
-- **Axios** - Cliente HTTP
+# 4. Push y crear PR
+git push origin feature/nombre-funcionalidad
+# Crear PR hacia feat/fullstack-bootstrap
+```
 
-### Backend (Fastify)
+### **🔒 Reglas de Colaboración**
 
-- **Arquitectura en capas** - Controladores, servicios, repositorios
-- **Autenticación JWT** - Seguridad stateless
-- **Validación de esquemas** - Fastify JSON Schema
-- **Documentación OpenAPI** - Swagger integrado
+#### **❌ NO Tocar Directamente:**
 
-### Base de Datos
+- `packages/backend/prisma/schema.prisma` (sin coordinación)
+- `packages/backend/src/domain/entities.ts` (entidades core)
+- `packages/frontend/src/stores/auth.ts` (autenticación)
+- `packages/backend/prisma/seed.ts` (datos de prueba)
 
-- **PostgreSQL 16** - Base de datos principal
-- **Prisma Schema** - Definición de modelos
-- **Migraciones** - Control de versiones DB
+#### **✅ Safe para Modificar:**
 
-## 📋 ADRs (Architecture Decision Records)
+- Nuevas páginas en `packages/frontend/src/pages/`
+- Nuevos componentes en `packages/frontend/src/components/`
+- Nuevos controladores en `packages/backend/src/controllers/`
+- Nuevos casos de uso en `packages/backend/src/services/`
+- Estilos en `packages/frontend/src/style.css`
+- Tests en `packages/backend/src/tests/`
 
-Las decisiones técnicas importantes se documentan en `docs/ADRs/`:
+### **📝 Convenciones de Commits**
 
-- [ADR-001: Elección de Vue.js para Frontend](docs/ADRs/ADR-001-vue-frontend.md)
-- [ADR-002: Fastify como Framework Backend](docs/ADRs/ADR-002-fastify-backend.md)
-- [ADR-003: Prisma como ORM](docs/ADRs/ADR-003-prisma-orm.md)
+```bash
+feat: nueva funcionalidad
+fix: corrección de bug
+docs: cambios en documentación
+style: cambios de formato (no afectan lógica)
+refactor: refactorización de código
+test: agregar o modificar tests
+chore: tareas de mantenimiento
+```
 
-## 🤝 Contribución
+## �️ **Scripts y Comandos de Desarrollo**
 
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feat/amazing-feature`)
-3. Commit tus cambios (`npm run commit`)
-4. Push a la rama (`git push origin feat/amazing-feature`)
-5. Abre un Pull Request
+### **Backend Scripts** (desde `/packages/backend/`)
 
-### Guidelines
+```bash
+npm run dev          # Servidor desarrollo (http://localhost:3000)
+npm run build        # Compilar TypeScript
+npm run test         # Ejecutar tests unitarios Given-When-Then
+npm run test:watch   # Tests en modo watch
+npm run db:seed      # Popular base de datos con datos de prueba
+npm run db:reset     # Resetear base de datos completamente
+npm run db:studio    # Abrir Prisma Studio (GUI de BD)
+npm run lint         # Verificar código con ESLint
+npm run lint:fix     # Corregir problemas de lint automáticamente
+```
 
-- Seguir [Conventional Commits](https://www.conventionalcommits.org/)
-- Mantener cobertura de tests > 80%
-- Documentar cambios en ADRs si es necesario
-- Actualizar bitácoras P2P diarias
+### **Frontend Scripts** (desde `/packages/frontend/`)
 
-## 📊 CI/CD
+```bash
+npm run dev          # Servidor desarrollo (http://localhost:5173)
+npm run build        # Build para producción
+npm run preview      # Preview del build
+npm run lint         # Verificar código
+npm run lint:fix     # Corregir lint
+```
 
-GitHub Actions automatiza:
+### **URLs de Desarrollo**
 
-- ✅ **Linting** y formato de código
-- 🧪 **Tests** unitarios y de integración
-- 🏗️ **Build** de ambos paquetes
-- 🔍 **Análisis de código** con SonarCloud
-- 🚀 **Deploy** automático a staging
+- **Frontend UI:** http://localhost:5173
+- **Backend API:** http://localhost:3000
+- **Prisma Studio:** http://localhost:5555 (después de `npm run db:studio`)
 
-## 📝 Documentación P2P
+### **APIs Principales Implementadas**
 
-### Bitácoras Diarias
+```bash
+# Autenticación
+POST /api/auth/login     # Login con email/password
+POST /api/auth/refresh   # Refresh token
+GET  /api/auth/me        # Perfil del usuario actual
 
-- Registrar en `docs/p2p/daily-logs/YYYY-MM-DD.md`
-- Incluir: objetivos, progreso, blockers, aprendizajes
+# Productos
+GET    /api/productos              # Listar productos
+POST   /api/productos              # Crear producto (ADMIN)
+GET    /api/productos/:id          # Obtener producto específico
+PUT    /api/productos/:id          # Actualizar producto (ADMIN)
+DELETE /api/productos/:id          # Eliminar producto (ADMIN)
 
-### Evidencia de Colaboración
+# Inventario
+GET  /api/inventario/movimientos   # Listar movimientos
+POST /api/inventario/entrada       # Registrar entrada (OPERARIO)
+POST /api/inventario/salida        # Registrar salida (OPERARIO)
+GET  /api/inventario/stock         # Estado actual de stock
+```
 
-- Screenshots de pair programming
-- Registros de code reviews
-- Comunicación del equipo
+## 🧪 **Testing y Calidad**
 
-## 🐛 Reportar Issues
+### **Tests Implementados**
 
-Usa nuestros templates:
+```bash
+cd packages/backend
+npm run test
 
-- [🐛 Bug Report](.github/ISSUE_TEMPLATE/bug.md)
-- [✨ Feature Request](.github/ISSUE_TEMPLATE/feature.md)
+# Tests con patrón Given-When-Then
+describe('CU-INV-01: Registrar salida', () => {
+  it('Given stock 50, When salida 10, Then stock=40', async () => {
+    // Given - Setup del escenario
+    // When - Acción a probar
+    // Then - Verificaciones y assertions
+  })
+})
+```
 
-## 📄 Licencia
+### **Estructura de Tests**
 
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+- ✅ **Tests unitarios** para casos de uso
+- ✅ **Mocks** para repositorios y servicios externos
+- ✅ **Cobertura** de flujos principales
+- ✅ **Validation testing** para DTOs y schemas
 
-## 👥 Equipo
+## 🔧 **Solución de Problemas Comunes**
 
-- **Lead Developer** - [@Marmo03](https://github.com/Marmo03)
-- **Desarrollador 2** - [@colaborador](https://github.com/colaborador)
+### **Problemas de Setup**
+
+```bash
+# Error: Puerto ocupado
+# Windows PowerShell:
+Get-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess | Stop-Process
+Get-Process -Id (Get-NetTCPConnection -LocalPort 5173).OwningProcess | Stop-Process
+
+# Error: Dependencias corruptas
+rm -rf node_modules packages/*/node_modules package-lock.json
+npm install
+
+# Error: Base de datos corrupta
+cd packages/backend
+rm prisma/dev.db
+npx prisma migrate dev --name reset
+npm run db:seed
+```
+
+### **Problemas de Desarrollo**
+
+```bash
+# Error: TypeScript compilation
+npx tsc --noEmit  # Verificar errores de tipos
+
+# Error: Prisma Client desactualizado
+cd packages/backend
+npx prisma generate
+
+# Error: ESLint/Prettier
+npm run lint:fix  # Desde raíz o paquete específico
+```
+
+## 🏗️ **Arquitectura y Patrones Implementados**
+
+### **Backend - Arquitectura Hexagonal**
+
+```typescript
+// Separación clara de responsabilidades
+src/
+├── domain/              # Lógica de negocio pura (sin dependencias externas)
+│   ├── entities.ts      # Entidades del dominio
+│   ├── repositories.ts  # Interfaces (contratos)
+│   ├── strategies/      # Strategy Pattern para reabastecimiento
+│   ├── approvals/       # Chain of Responsibility para aprobaciones
+│   └── events/          # Observer Pattern para eventos y KPIs
+├── services/            # Casos de uso de aplicación
+│   ├── inventario-use-cases.ts      # CU-INV-01, CU-INV-02, etc.
+│   ├── solicitudes-use-cases.ts     # CU-SC-01, CU-APR-01, etc.
+│   ├── kpis-use-cases.ts           # CU-KPI-01, CU-KPI-02, etc.
+│   └── reabastecimiento-use-cases.ts # CU-REB-01, etc.
+├── infra/               # Adaptadores e infraestructura
+│   ├── prisma/          # Implementaciones concretas de repositorios
+│   └── adapters/        # Email, jobs, servicios externos
+└── controllers/         # Controladores HTTP (capa de presentación)
+```
+
+### **Frontend - Vue.js SPA**
+
+```typescript
+// Arquitectura orientada a componentes
+src/
+├── pages/               # Páginas principales de la aplicación
+│   ├── LoginPage.vue           # Autenticación
+│   ├── DashboardPage.vue       # Resumen y métricas
+│   ├── ProductosPage.vue       # Gestión de productos
+│   ├── InventarioPage.vue      # Movimientos de inventario
+│   ├── SolicitudesPage.vue     # Workflow de solicitudes
+│   ├── KPIsPage.vue           # Indicadores y reportes
+│   └── PerfilPage.vue         # Configuración de usuario
+├── components/          # Componentes reutilizables
+├── stores/              # Estado global con Pinia
+│   └── auth.ts         # Autenticación, roles, permisos
+├── router/              # Configuración de rutas con guards
+└── style.css           # Estilos globales + TailwindCSS
+```
+
+### **Patrones de Diseño en Acción**
+
+#### **🎯 Strategy Pattern - Algoritmos de Reabastecimiento**
+
+```typescript
+// Diferentes estrategias para calcular cuándo y cuánto comprar
+interface EstrategiaReabastecimiento {
+  calcular(producto: Producto): SugerenciaCompra;
+}
+
+class EOQStrategy implements EstrategiaReabastecimiento {
+  /* Lote Económico */
+}
+class ManualStrategy implements EstrategiaReabastecimiento {
+  /* Cantidad Fija */
+}
+```
+
+#### **⛓️ Chain of Responsibility - Aprobaciones Multinivel**
+
+```typescript
+// Flujo de aprobación que pasa por diferentes niveles según el monto
+class AprobadorOperativo extends BaseAprobador {
+  /* < $1M */
+}
+class AprobadorGerencial extends BaseAprobador {
+  /* $1M - $10M */
+}
+class AprobadorDirectivo extends BaseAprobador {
+  /* > $10M */
+}
+```
+
+#### **👁️ Observer Pattern - Sistema de Eventos para KPIs**
+
+```typescript
+// Los KPIs se actualizan automáticamente cuando ocurren eventos
+class KPIObserver implements EventObserver {
+  onInventarioActualizado(evento: InventarioActualizadoEvent) {
+    // Recalcular rotación, fill rate, etc.
+  }
+}
+```
+
+## � **Próximos Pasos para Nuevos Colaboradores**
+
+### **Día 1: Setup y Familiarización**
+
+- [ ] Clonar repositorio y ejecutar aplicación localmente
+- [ ] Probar login con todos los roles disponibles
+- [ ] Explorar cada módulo y funcionalidad
+- [ ] Revisar estructura de código backend y frontend
+
+### **Día 2-3: Comprensión Técnica**
+
+- [ ] Entender arquitectura hexagonal implementada
+- [ ] Revisar patrones de diseño en acción
+- [ ] Analizar casos de uso y tests unitarios
+- [ ] Explorar APIs con herramienta como Postman
+
+### **Día 4-5: Primera Contribución**
+
+- [ ] Crear rama de feature pequeña
+- [ ] Implementar mejora menor (ej: validación, estilo)
+- [ ] Escribir test correspondiente
+- [ ] Crear PR siguiendo convenciones establecidas
+
+### **Semana 2+: Desarrollo Avanzado**
+
+- [ ] Implementar nuevas funcionalidades completas
+- [ ] Proponer mejoras arquitectónicas
+- [ ] Optimizar rendimiento y UX
+- [ ] Contribuir a documentación
+
+## 📚 **Recursos Adicionales**
+
+### **Documentación Técnica**
+
+- **[SETUP.md](SETUP.md)** - Guía detallada de instalación y setup
+- **Arquitectura Hexagonal** - Patrón implementado en el backend
+- **Vue.js 3 Composition API** - Patrón usado en frontend
+- **Prisma ORM** - Documentación oficial para queries
+
+### **APIs y Schemas**
+
+- **Swagger/OpenAPI** - Documentación automática de APIs (próximamente)
+- **Prisma Studio** - GUI para explorar base de datos
+- **Vue DevTools** - Extension para debugging del frontend
+
+### **Herramientas Recomendadas**
+
+- **VS Code** con extensiones: Vue, Prisma, TypeScript
+- **Thunder Client / Postman** para testing de APIs
+- **Prisma Studio** para gestión de base de datos
+- **Vue DevTools** para debugging del estado
+
+## 🤝 **Contribución y Colaboración**
+
+### **Pull Request Process**
+
+1. **Fork** el proyecto o crear rama desde `feat/fullstack-bootstrap`
+2. **Desarrollar** siguiendo patrones establecidos
+3. **Testing** - Agregar tests para nueva funcionalidad
+4. **Commit** usando convenciones semánticas
+5. **PR** hacia `feat/fullstack-bootstrap` con descripción detallada
+
+### **Code Review Guidelines**
+
+- ✅ **Funcionalidad** - Código cumple requisitos
+- ✅ **Arquitectura** - Respeta patrones establecidos
+- ✅ **Testing** - Incluye tests apropiados
+- ✅ **Performance** - No degrada rendimiento
+- ✅ **Security** - No introduce vulnerabilidades
+
+### **Canales de Comunicación**
+
+- **GitHub Issues** - Reportar bugs y solicitar features
+- **PR Comments** - Discusiones técnicas específicas
+- **Documentación** - Mantener README y SETUP actualizados
 
 ---
 
-**Universidad**: USC - Gestión de Proyectos TI  
-**Semestre**: 7  
-**Año**: 2024
+## 📄 **Información del Proyecto**
+
+**Universidad:** USC - Gestión de Proyectos TI  
+**Semestre:** 7 (2025)  
+**Licencia:** MIT  
+**Estado:** ✅ **Funcional completo** - Backend + Frontend implementados
+
+### **Equipo de Desarrollo**
+
+- **Lead Developer** - [@Marmo03](https://github.com/Marmo03)
+- **Colaboradores** - ¡Tu contribución es bienvenida!
+
+---
+
+## 🎉 **¡Bienvenido al Equipo!**
+
+Este proyecto implementa una **arquitectura sólida y escalable** con patrones de diseño modernos. El código está **bien estructurado, documentado y testeado**.
+
+**¡Cualquier duda sobre setup, arquitectura o implementación, no hesites en crear un issue o PR!**
+
+**Happy Coding! 🚀🍺**

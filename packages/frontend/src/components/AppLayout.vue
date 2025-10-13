@@ -1,8 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50 flex">
     <!-- Sidebar -->
     <div
-      class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0"
+      class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 lg:flex lg:flex-col"
       :class="{ '-translate-x-full': !sidebarOpen }"
     >
       <!-- Logo -->
@@ -201,9 +201,9 @@
     ></div>
 
     <!-- Main content -->
-    <div class="lg:pl-64">
+    <div class="flex-1 flex flex-col lg:pl-0">
       <!-- Top bar -->
-      <header class="bg-white shadow-sm border-b border-gray-200">
+      <header class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
         <div class="px-4 sm:px-6 lg:px-8">
           <div class="flex items-center justify-between h-16">
             <!-- Menu button para móviles -->
@@ -336,7 +336,7 @@
       </header>
 
       <!-- Page content -->
-      <main class="py-6 px-4 sm:px-6 lg:px-8">
+      <main class="flex-1 py-4 px-4 sm:px-6 lg:px-8 page-container">
         <slot />
       </main>
     </div>
