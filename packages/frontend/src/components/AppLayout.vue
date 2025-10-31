@@ -19,12 +19,18 @@
               <path
                 d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1zM10 6a2 2 0 0 1 4 0v1h-4V6zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10z"
               />
-              <path d="M12 12a1 1 0 0 0-1 1v2a1 1 0 0 0 2 0v-2a1 1 0 0 0-1-1z"/>
+              <path
+                d="M12 12a1 1 0 0 0-1 1v2a1 1 0 0 0 2 0v-2a1 1 0 0 0-1-1z"
+              />
             </svg>
           </div>
           <div class="flex flex-col min-w-0">
-            <span class="text-lg font-bold text-white truncate">Cervecería USC</span>
-            <span class="text-xs text-blue-100 truncate">Cadena de Suministro</span>
+            <span class="text-lg font-bold text-white truncate"
+              >Cervecería USC</span
+            >
+            <span class="text-xs text-blue-100 truncate"
+              >Cadena de Suministro</span
+            >
           </div>
         </div>
       </div>
@@ -141,6 +147,36 @@
               </router-link>
             </li>
 
+            <!-- Logística -->
+            <li v-if="authStore.hasAnyRole(['ADMIN', 'OPERARIO', 'ANALISTA'])">
+              <router-link
+                to="/logistica"
+                class="nav-link"
+                active-class="nav-link-active"
+              >
+                <svg
+                  class="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
+                  />
+                </svg>
+                Logística
+              </router-link>
+            </li>
+
             <!-- KPIs -->
             <li v-if="authStore.hasAnyRole(['ADMIN', 'ANALISTA'])">
               <router-link
@@ -241,7 +277,10 @@
                     Dashboard
                   </router-link>
                 </li>
-                <li v-if="$route.name !== 'Dashboard'" class="flex items-center min-w-0">
+                <li
+                  v-if="$route.name !== 'Dashboard'"
+                  class="flex items-center min-w-0"
+                >
                   <svg
                     class="flex-shrink-0 h-4 w-4 text-gray-300 mx-2"
                     fill="currentColor"
@@ -253,7 +292,9 @@
                       clip-rule="evenodd"
                     />
                   </svg>
-                  <span class="text-gray-500 text-sm truncate">{{ $route.name }}</span>
+                  <span class="text-gray-500 text-sm truncate">{{
+                    $route.name
+                  }}</span>
                 </li>
               </ol>
             </nav>
@@ -261,7 +302,9 @@
             <!-- User menu -->
             <div class="flex items-center space-x-2 flex-shrink-0">
               <!-- Notificaciones -->
-              <button class="p-2 text-gray-400 hover:text-gray-500 hidden sm:block">
+              <button
+                class="p-2 text-gray-400 hover:text-gray-500 hidden sm:block"
+              >
                 <svg
                   class="h-5 w-5"
                   fill="none"
@@ -287,10 +330,13 @@
                     class="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0"
                   >
                     <span class="text-white font-medium text-xs">
-                      {{ authStore.user?.firstName?.charAt(0) || '' }}{{ authStore.user?.lastName?.charAt(0) || '' }}
+                      {{ authStore.user?.firstName?.charAt(0) || ""
+                      }}{{ authStore.user?.lastName?.charAt(0) || "" }}
                     </span>
                   </div>
-                  <span class="ml-2 text-gray-700 font-medium hidden md:block truncate max-w-24">
+                  <span
+                    class="ml-2 text-gray-700 font-medium hidden md:block truncate max-w-24"
+                  >
                     {{ authStore.fullName }}
                   </span>
                   <svg
@@ -340,7 +386,9 @@
 
       <!-- Page content -->
       <main class="flex-1 overflow-hidden">
-        <div class="h-full overflow-y-auto px-4 py-4 sm:px-6 lg:px-8 page-container container-responsive">
+        <div
+          class="h-full overflow-y-auto px-4 py-4 sm:px-6 lg:px-8 page-container container-responsive"
+        >
           <slot />
         </div>
       </main>

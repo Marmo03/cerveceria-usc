@@ -7,6 +7,7 @@ import DashboardPage from "../pages/DashboardPage.vue";
 import ProductosPage from "../pages/ProductosPage.vue";
 import InventarioPage from "../pages/InventarioPage.vue";
 import SolicitudesPage from "../pages/SolicitudesPage.vue";
+import LogisticaPage from "../pages/LogisticaPage.vue";
 import KPIsPage from "../pages/KPIsPage.vue";
 import PerfilPage from "../pages/PerfilPage.vue";
 
@@ -54,6 +55,15 @@ const router = createRouter({
       meta: {
         requiresAuth: true,
         roles: ["ADMIN", "OPERARIO", "APROBADOR"],
+      },
+    },
+    {
+      path: "/logistica",
+      name: "Logística",
+      component: LogisticaPage,
+      meta: {
+        requiresAuth: true,
+        roles: ["ADMIN", "OPERARIO", "ANALISTA"],
       },
     },
     {

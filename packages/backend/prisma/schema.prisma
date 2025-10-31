@@ -90,6 +90,7 @@ model Producto {
   movimientos            MovimientoInventario[]
   politicaAbastecimiento PoliticaAbastecimiento?
   solicitudesCompra      SolicitudCompra[]
+  productosEnvio         ProductoEnvio[]
 
   @@map("productos")
 }
@@ -149,6 +150,7 @@ model SolicitudCompra {
   creador          User        @relation("SolicitudCreador", fields: [creadorId], references: [id])
   aprobadorActual  User?       @relation("AprobadorActual", fields: [aprobadorActualId], references: [id])
   aprobaciones     Aprobacion[]
+  envios           Envio[]
 
   @@map("solicitudes_compra")
 }
@@ -207,6 +209,107 @@ model Importacion {
   @@map("importaciones")
 }
 
+// ===== DOMINIO DE LOGÍSTICA =====
+
+// Tabla de Transportistas
+model Transportista {
+  id          String   @id @default(cuid())
+  nombre      String
+  contacto    String?
+  email       String?
+  telefono    String?
+  tipoServicio String  // "TERRESTRE" | "AEREO" | "MARITIMO" | "MULTIMODAL"
+  costoBase   Float    @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relaciones
+  envios Envio[]
+
+  @@map("transportistas")
+}
+
+// Tabla de Envíos
+model Envio {
+  id                String   @id @default(cuid())
+  numeroGuia        String   @unique  // Número de guía/tracking
+  solicitudCompraId String?  // Relación opcional con solicitud de compra
+  transportistaId   String
+  origen            String   // Dirección de origen
+  destino           String   // Dirección de destino
+  estado            String   @default("PENDIENTE") // "PENDIENTE" | "EN_TRANSITO" | "ENTREGADO" | etc.
+  prioridad         String   @default("NORMAL") // "ALTA" | "NORMAL" | "BAJA"
+  costoEnvio        Float    @default(0)
+  pesoTotal         Float?   // Peso en KG
+  volumenTotal      Float?   // Volumen en m³
+  fechaEstimada     DateTime?
+  fechaEnvio        DateTime?
+  fechaEntrega      DateTime?
+  observaciones     String?
+  metadataJSON      String?  // JSON para datos adicionales
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relaciones
+  transportista      Transportista       @relation(fields: [transportistaId], references: [id])
+  solicitudCompra    SolicitudCompra?    @relation(fields: [solicitudCompraId], references: [id])
+  productosEnvio     ProductoEnvio[]
+  rutasEnvio         RutaEnvio[]
+  estadosEnvio       EstadoEnvio[]
+
+  @@map("envios")
+}
+
+// Tabla de Productos en Envío (relación muchos a muchos)
+model ProductoEnvio {
+  id         String   @id @default(cuid())
+  envioId    String
+  productoId String
+  cantidad   Int
+  observaciones String?
+  createdAt  DateTime @default(now())
+
+  // Relaciones
+  envio    Envio    @relation(fields: [envioId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@map("productos_envio")
+}
+
+// Tabla de Rutas de Envío (trazabilidad del recorrido)
+model RutaEnvio {
+  id          String   @id @default(cuid())
+  envioId     String
+  secuencia   Int      // Orden de la ruta
+  ubicacion   String   // Ciudad/País/Coordenadas
+  descripcion String?
+  fechaLlegada DateTime?
+  fechaSalida  DateTime?
+  createdAt   DateTime @default(now())
+
+  // Relaciones
+  envio Envio @relation(fields: [envioId], references: [id], onDelete: Cascade)
+
+  @@map("rutas_envio")
+}
+
+// Tabla de Estados de Envío (historial de cambios de estado)
+model EstadoEnvio {
+  id          String   @id @default(cuid())
+  envioId     String
+  estado      String   // Estado actual del envío
+  ubicacion   String?  // Ubicación donde ocurrió el cambio
+  descripcion String?
+  fecha       DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  // Relaciones
+  envio Envio @relation(fields: [envioId], references: [id], onDelete: Cascade)
+
+  @@map("estados_envio")
+}
+
 // ===== CONSTANTES (Reemplazando enums para SQLite) =====
 // RoleName: "ADMIN" | "OPERARIO" | "APROBADOR" | "ANALISTA"
 // TipoMovimiento: "ENTRADA" | "SALIDA"
@@ -216,4 +319,7 @@ model Importacion {
 // TipoIndicador: "ROTACION_INVENTARIO" | "FILL_RATE" | "TIEMPO_CICLO" | "NIVEL_SERVICIO" | "BACKORDERS" | "COSTO_INVENTARIO"
 // TipoImportacion: "VENTAS" | "STOCK" | "PRODUCTOS"
 // EstadoImportacion: "PENDIENTE" | "PROCESANDO" | "COMPLETADA" | "FALLIDA" | "PARCIAL"
+// TipoServicioTransporte: "TERRESTRE" | "AEREO" | "MARITIMO" | "MULTIMODAL"
+// EstadoEnvio: "PENDIENTE" | "EN_PREPARACION" | "EN_TRANSITO" | "EN_ADUANA" | "EN_ENTREGA" | "ENTREGADO" | "CANCELADO" | "DEVUELTO"
+// PrioridadEnvio: "ALTA" | "NORMAL" | "BAJA"
 

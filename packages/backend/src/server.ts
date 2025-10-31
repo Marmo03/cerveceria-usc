@@ -13,6 +13,7 @@ import productRoutes from './controllers/products.js'
 import inventoryRoutes from './controllers/inventory.js'
 import salesRoutes from './controllers/sales.js'
 import reportsRoutes from './controllers/reports.js'
+import logisticsRoutes from './controllers/logistics.js'
 
 // Configuración del servidor
 const server: FastifyInstance = Fastify({
@@ -85,6 +86,10 @@ async function configurePlugins() {
         { name: 'inventory', description: 'Gestión de inventario' },
         { name: 'sales', description: 'Gestión de ventas' },
         { name: 'reports', description: 'Reportes e indicadores' },
+        {
+          name: 'logistics',
+          description: 'Gestión de logística y rastreo de envíos',
+        },
       ],
     },
   })
@@ -117,6 +122,7 @@ async function configureRoutes() {
   await server.register(inventoryRoutes, { prefix: '/api/inventory' })
   await server.register(salesRoutes, { prefix: '/api/sales' })
   await server.register(reportsRoutes, { prefix: '/api/reports' })
+  await server.register(logisticsRoutes, { prefix: '/api/logistics' })
 }
 
 // Verificar salud de la base de datos
@@ -125,7 +131,7 @@ async function checkDatabaseHealth(): Promise<boolean> {
     await prisma.$queryRaw`SELECT 1`
     return true
   } catch (error) {
-    server.log.error('Database health check failed:', error)
+    server.log.error({ error }, 'Database health check failed')
     return false
   }
 }
@@ -133,7 +139,7 @@ async function checkDatabaseHealth(): Promise<boolean> {
 // Manejo de errores global
 server.setErrorHandler((error, request, reply) => {
   server.log.error(error)
-  
+
   if (error.validation) {
     reply.status(400).send({
       error: 'Validation Error',
@@ -173,7 +179,9 @@ async function start() {
 
     await server.listen({ host, port })
     server.log.info(`Cervecería USC API running on http://${host}:${port}`)
-    server.log.info(`Swagger docs available at http://${host}:${port}/documentation`)
+    server.log.info(
+      `Swagger docs available at http://${host}:${port}/documentation`
+    )
   } catch (error) {
     server.log.error(error)
     process.exit(1)
