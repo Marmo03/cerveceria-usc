@@ -45,7 +45,8 @@ export const useAuthStore = defineStore("auth", () => {
 
   // Configurar axios con token
   const setupAxiosInterceptor = () => {
-    axios.defaults.baseURL = "http://localhost:3000/api";
+    axios.defaults.baseURL =
+      import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
     // Request interceptor para agregar token
     axios.interceptors.request.use(
@@ -89,19 +90,23 @@ export const useAuthStore = defineStore("auth", () => {
 
         // Guardar token y usuario
         token.value = authToken;
-        
+
         // Manejar permisos de forma segura
         let permissions: string[] = [];
         if (userData.role.permissions) {
-          if (typeof userData.role.permissions === 'string') {
+          if (typeof userData.role.permissions === "string") {
             try {
-              permissions = Object.values(JSON.parse(userData.role.permissions)).flat() as string[];
+              permissions = Object.values(
+                JSON.parse(userData.role.permissions)
+              ).flat() as string[];
             } catch (e) {
               console.warn("Error parsing permissions:", e);
               permissions = [];
             }
-          } else if (typeof userData.role.permissions === 'object') {
-            permissions = Object.values(userData.role.permissions).flat() as string[];
+          } else if (typeof userData.role.permissions === "object") {
+            permissions = Object.values(
+              userData.role.permissions
+            ).flat() as string[];
           }
         }
 
@@ -111,7 +116,7 @@ export const useAuthStore = defineStore("auth", () => {
           firstName: userData.firstName,
           lastName: userData.lastName,
           roleName: userData.role.name,
-          permissions: permissions
+          permissions: permissions,
         };
 
         // Persistir token en localStorage
@@ -127,13 +132,15 @@ export const useAuthStore = defineStore("auth", () => {
     } catch (err: any) {
       console.error("Error en login:", err);
       console.error("Error details:", err.response);
-      
-      if (err.code === 'ECONNREFUSED' || err.code === 'ERR_NETWORK') {
-        error.value = "No se puede conectar al servidor. Verifica que esté funcionando.";
+
+      if (err.code === "ECONNREFUSED" || err.code === "ERR_NETWORK") {
+        error.value =
+          "No se puede conectar al servidor. Verifica que esté funcionando.";
       } else if (err.response?.status === 401) {
         error.value = "Credenciales incorrectas";
       } else {
-        error.value = err.response?.data?.message || err.message || "Error de conexión";
+        error.value =
+          err.response?.data?.message || err.message || "Error de conexión";
       }
       throw err;
     } finally {
@@ -168,7 +175,7 @@ export const useAuthStore = defineStore("auth", () => {
           firstName: userData.firstName,
           lastName: userData.lastName,
           roleName: userData.role.name,
-          permissions: userData.role.permissions || []
+          permissions: userData.role.permissions || [],
         };
       } else {
         logout();
