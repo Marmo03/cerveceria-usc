@@ -1,7 +1,7 @@
 {
   "name": "cerveceria-usc",
   "version": "1.0.0",
-  "description": "Plataforma completa de cadena de suministro para Cervecería USC con automatización RPA - Vue.js, Fastify, Prisma y SQLite",
+  "description": "Plataforma completa de cadena de suministro para Cervecería USC con automatización RPA - Vue.js, Fastify, Prisma y PostgreSQL",
   "private": true,
   "workspaces": [
     "packages/frontend",
@@ -76,7 +76,7 @@
     "vue",
     "fastify",
     "prisma",
-    "sqlite",
+    "postgresql",
     "monorepo",
     "proyecto-universitario"
   ],

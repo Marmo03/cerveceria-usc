@@ -42,7 +42,7 @@ cd packages/frontend && npm run dev
 ### **Backend (Arquitectura Hexagonal)**
 
 - **Node.js + Fastify** - API REST con TypeScript
-- **Prisma ORM** - Gestión de base de datos SQLite
+- **Prisma ORM** - Gestión de base de datos PostgreSQL 16
 - **JWT Authentication** - Autenticación con refresh tokens
 - **Bcrypt** - Hashing seguro de contraseñas
 - **Vitest** - Framework de testing con Given-When-Then
@@ -58,7 +58,7 @@ cd packages/frontend && npm run dev
 
 ### **Base de Datos**
 
-- **SQLite** - Base de datos embebida (desarrollo)
+- **PostgreSQL 16** - Base de datos relacional enterprise
 - **Prisma Schema** - Modelado de datos type-safe
 - **Migraciones** - Control de versiones de esquema
 - **Seed Data** - Datos de prueba pre-poblados
@@ -109,7 +109,7 @@ analista@cerveceria-usc.edu.co   // Análisis y reportes
 cerveceria-usc/
 ├── packages/
 │   ├── backend/              # API Node.js + Fastify
-│   │   ├── prisma/           # Schema SQLite + migraciones
+│   │   ├── prisma/           # Schema PostgreSQL + migraciones
 │   │   ├── src/
 │   │   │   ├── domain/       # Lógica de negocio pura
 │   │   │   │   ├── entities.ts

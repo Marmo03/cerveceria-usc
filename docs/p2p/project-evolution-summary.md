@@ -28,7 +28,7 @@ _Estado inicial del proyecto_
 
 - Monorepo con packages/backend y packages/frontend
 - Stack: Node.js + Fastify (backend), Vue.js 3 (frontend)
-- Base de datos: SQLite con Prisma ORM
+- Base de datos: PostgreSQL 16 con Prisma ORM
 - Metodología P2P para desarrollo colaborativo
 
 ### 🚀 **Fase 2: Implementación Backend (Arquitectura Hexagonal)**
@@ -41,7 +41,7 @@ _Desarrollo de la base sólida del sistema_
 - ✅ API REST con Fastify
 - ✅ Autenticación JWT con refresh tokens
 - ✅ Sistema de roles y permisos (4 tipos de usuarios)
-- ✅ Base de datos SQLite con Prisma
+- ✅ Base de datos PostgreSQL 16 con Prisma
 - ✅ Patrones de diseño aplicados:
   - Strategy Pattern (algoritmos de reabastecimiento)
   - Chain of Responsibility (aprobaciones)

@@ -35,7 +35,7 @@ npm install
 ```bash
 cd packages/backend
 
-# Generar base de datos SQLite y aplicar migraciones
+# Generar base de datos PostgreSQL y aplicar migraciones
 npx prisma migrate dev --name init
 
 # Poblar con datos de prueba (usuarios, productos, etc.)
@@ -80,7 +80,7 @@ npm run dev
 cerveceria-usc/
 ├── packages/
 │   ├── backend/          # API Node.js + Fastify
-│   │   ├── prisma/       # Base de datos SQLite
+│   │   ├── prisma/       # Base de datos PostgreSQL
 │   │   ├── src/
 │   │   │   ├── domain/   # Entidades y lógica de negocio
 │   │   │   ├── services/ # Casos de uso
