@@ -1,8 +1,8 @@
-# Arquitectura
+# Arquitectura de la Aplicación
 
 ## Documentación de la Arquitectura de la Aplicación
 
-La aplicación utiliza una arquitectura de tres capas, compuesta por una base de datos PostgreSQL para el almacenamiento de datos, un frontend desarrollado con Vue.js para la interfaz de usuario y un backend implementado con Fastify para el procesamiento de datos y la lógica del servidor.
+La aplicación utiliza una arquitectura monolítica por capas, compuesta por una base de datos PostgreSQL para el almacenamiento de datos, un frontend desarrollado con Vue.js para la interfaz de usuario y un backend implementado con Fastify para el procesamiento de datos y la lógica del servidor.
 
 ### Base de Datos - PostgreSQL
 
@@ -10,11 +10,11 @@ La base de datos utilizada en la aplicación es PostgreSQL 16, un sistema de ges
 
 PostgreSQL ofrece características avanzadas como:
 
-- **ACID Compliance** - Transacciones seguras y confiables
-- **JSONB** - Almacenamiento eficiente de datos JSON
-- **Full-Text Search** - Búsqueda de texto completo nativa
-- **Row-Level Security** - Seguridad a nivel de fila
-- **Connection Pooling** - Gestión eficiente de conexiones
+* **ACID Compliance** - Transacciones seguras y confiables
+* **JSONB** - Almacenamiento eficiente de datos JSON
+* **Full-Text Search** - Búsqueda de texto completo nativa
+* **Row-Level Security** - Seguridad a nivel de fila
+* **Connection Pooling** - Gestión eficiente de conexiones
 
 ### Frontend - Vue.js
 
@@ -22,21 +22,21 @@ El frontend de la aplicación está desarrollado utilizando Vue.js 3, un framewo
 
 Vue.js proporciona:
 
-- **Composition API** - Sistema de composición moderno y flexible
-- **Reactivity System** - Sistema de reactividad eficiente
-- **Single File Components** - Componentes autocontenidos (.vue)
-- **Vue Router** - Sistema de enrutamiento integrado
-- **Pinia** - Gestión de estado centralizada
+* **Composition API** - Sistema de composición moderno y flexible
+* **Reactivity System** - Sistema de reactividad eficiente
+* **Single File Components** - Componentes autocontenidos (.vue)
+* **Vue Router** - Sistema de enrutamiento integrado
+* **Pinia** - Gestión de estado centralizada
 
 La interfaz de usuario se renderiza en el navegador web y permite a los usuarios interactuar con la aplicación de forma intuitiva mediante páginas organizadas por módulos:
 
-- Dashboard
-- Productos
-- Inventario
-- Solicitudes de Compra
-- Logística
-- KPIs
-- Perfil
+* Dashboard
+* Productos
+* Inventario
+* Solicitudes de Compra
+* Logística
+* KPIs
+* Perfil
 
 ### Backend - Fastify
 
@@ -44,10 +44,10 @@ El backend de la aplicación está construido utilizando Fastify, un framework w
 
 Fastify se encarga de:
 
-- Manejar las solicitudes del cliente
-- Procesar la lógica del servidor
-- Interactuar con la base de datos mediante Prisma ORM
-- Generar respuestas adecuadas en formato JSON
+* Manejar las solicitudes del cliente
+* Procesar la lógica del servidor
+* Interactuar con la base de datos mediante Prisma ORM
+* Generar respuestas adecuadas en formato JSON
 
 El backend sigue la **Arquitectura Hexagonal** (también conocida como Ports and Adapters), lo que facilita la separación de preocupaciones y el desarrollo organizado. Los controladores de Fastify gestionan las solicitudes HTTP, interactúan con la base de datos y procesan los datos antes de enviar una respuesta al cliente.
 
@@ -57,51 +57,51 @@ La estructura del backend se organiza en capas:
 
 **1. Domain Layer (Núcleo del Negocio)**
 
-- Entidades de dominio (Producto, Usuario, Solicitud, Envío)
-- Interfaces de repositorios
-- Lógica de negocio pura sin dependencias externas
+* Entidades de dominio (Producto, Usuario, Solicitud, Envío)
+* Interfaces de repositorios
+* Lógica de negocio pura sin dependencias externas
 
 **2. Application Layer (Casos de Uso)**
 
-- Servicios de aplicación
-- Implementación de casos de uso
-- Orquestación de flujos de negocio
+* Servicios de aplicación
+* Implementación de casos de uso
+* Orquestación de flujos de negocio
 
 **3. Infrastructure Layer (Adaptadores)**
 
-- Implementaciones de repositorios con Prisma
-- Adaptadores de base de datos
-- Servicios externos
+* Implementaciones de repositorios con Prisma
+* Adaptadores de base de datos
+* Servicios externos
 
 **4. Presentation Layer (Controllers)**
 
-- Controladores HTTP
-- Validación de entrada con Zod
-- Transformación de respuestas
+* Controladores HTTP
+* Validación de entrada con Zod
+* Transformación de respuestas
 
 ### Patrones de Diseño Implementados
 
 **Strategy Pattern** - Algoritmos de reabastecimiento intercambiables:
 
-- EOQ (Economic Order Quantity)
-- Just-in-Time
-- Fixed Quantity
+* EOQ (Economic Order Quantity)
+* Just-in-Time
+* Fixed Quantity
 
 **Chain of Responsibility** - Flujo de aprobaciones multinivel:
 
-- Aprobador Operativo
-- Aprobador Gerencial
-- Aprobador Ejecutivo
+* Aprobador Operativo
+* Aprobador Gerencial
+* Aprobador Ejecutivo
 
 **Observer Pattern** - Sistema de eventos para KPIs:
 
-- Actualización automática de indicadores
-- Notificaciones de cambios de estado
+* Actualización automática de indicadores
+* Notificaciones de cambios de estado
 
 **Repository Pattern** - Abstracción de acceso a datos:
 
-- Interfaces genéricas
-- Implementaciones específicas con Prisma
+* Interfaces genéricas
+* Implementaciones específicas con Prisma
 
 ### Flujo de Datos
 
@@ -135,21 +135,21 @@ La aplicación implementa múltiples capas de seguridad:
 
 **Autenticación:**
 
-- JWT (JSON Web Tokens) para sesiones stateless
-- Tokens de acceso y refresh tokens
-- Bcrypt para hashing de contraseñas
+* JWT (JSON Web Tokens) para sesiones stateless
+* Tokens de acceso y refresh tokens
+* Bcrypt para hashing de contraseñas
 
 **Autorización:**
 
-- Control de acceso basado en roles (RBAC)
-- Middleware de verificación de permisos
-- Guards de rutas en el frontend
+* Control de acceso basado en roles (RBAC)
+* Middleware de verificación de permisos
+* Guards de rutas en el frontend
 
 **Validación:**
 
-- Schemas de validación con Zod
-- Sanitización de entrada
-- Prevención de SQL Injection mediante Prisma
+* Schemas de validación con Zod
+* Sanitización de entrada
+* Prevención de SQL Injection mediante Prisma
 
 Esta arquitectura modular y bien definida permite un desarrollo eficiente, escalable y mantenible de la aplicación, separando las responsabilidades de cada capa y facilitando la integración de nuevas funcionalidades.
 

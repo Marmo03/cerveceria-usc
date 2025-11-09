@@ -1,11 +1,10 @@
 # Table of contents
 
-* [🍻 Arquitectura](README.md)
-* [Inicio](<README (1).md>)
+* [Inicio](README.md)
 
 ## Arquitectura
 
-* [Arquitectura de la Aplicación](arquitectura-1/architecture.md)
+* [Arquitectura de la Aplicación](arquitectura/architecture.md)
 
 ## API's
 
