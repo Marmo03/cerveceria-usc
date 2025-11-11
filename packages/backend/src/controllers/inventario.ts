@@ -1,5 +1,37 @@
-// Controlador de Inventario - API Facade
-// Endpoints: POST /inventario/movimientos, GET /inventario/movimientos, GET /inventario/resumen
+/**
+ * Controlador de Inventario
+ *
+ * Gestiona todos los movimientos de inventario (entradas y salidas) y proporciona
+ * resúmenes del estado actual del inventario por producto.
+ *
+ * Arquitectura:
+ * - Controller (HTTP) → Use Cases → Domain → Repository
+ * - Validación estricta con Zod
+ * - Observer Pattern: Los movimientos emiten eventos para actualizar KPIs automáticamente
+ *
+ * Endpoints disponibles:
+ * - POST /inventario/movimientos       → Registrar entrada/salida de inventario
+ * - GET  /inventario/movimientos       → Listar historial de movimientos (con filtros)
+ * - GET  /inventario/resumen           → Obtener resumen consolidado de inventario
+ * - GET  /inventario/productos/:id     → Obtener detalle de inventario de un producto
+ *
+ * Tipos de movimiento:
+ * - ENTRADA: Compras, devoluciones de clientes, ajustes positivos, producción
+ * - SALIDA: Ventas, devoluciones a proveedores, ajustes negativos, consumo
+ *
+ * Filtros soportados:
+ * - productoId: Movimientos de un producto específico
+ * - tipo: Solo ENTRADAS o SALIDAS
+ * - fechaDesde/fechaHasta: Rango de fechas
+ * - referencia: Búsqueda por número de referencia
+ * - page/limit: Paginación
+ *
+ * Eventos generados:
+ * - MovimientoInventarioCreated → Actualiza rotación de inventario, fill rate
+ * - StockBajoDetectado → Trigger para reabastecimiento automático
+ *
+ * @module controllers/inventario
+ */
 
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'

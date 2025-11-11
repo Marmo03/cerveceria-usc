@@ -9,8 +9,8 @@ import { PrismaClient } from '@prisma/client'
 
 // Importar rutas
 import authRoutes from './controllers/auth.js'
-import productRoutes from './controllers/products.js'
-import inventoryRoutes from './controllers/inventory.js'
+import productosRoutes from './controllers/productos.js'
+import inventarioRoutes from './controllers/inventario.js'
 import salesRoutes from './controllers/sales.js'
 import reportsRoutes from './controllers/reports.js'
 import logisticsRoutes from './controllers/logistics.js'
@@ -82,8 +82,11 @@ async function configurePlugins() {
       produces: ['application/json'],
       tags: [
         { name: 'auth', description: 'Autenticación y autorización' },
-        { name: 'products', description: 'Gestión de productos' },
-        { name: 'inventory', description: 'Gestión de inventario' },
+        { name: 'productos', description: 'Gestión de productos' },
+        {
+          name: 'inventario',
+          description: 'Gestión de inventario y movimientos',
+        },
         { name: 'sales', description: 'Gestión de ventas' },
         { name: 'reports', description: 'Reportes e indicadores' },
         {
@@ -118,8 +121,8 @@ async function configureRoutes() {
 
   // Registrar rutas de la API
   await server.register(authRoutes, { prefix: '/api/auth' })
-  await server.register(productRoutes, { prefix: '/api/products' })
-  await server.register(inventoryRoutes, { prefix: '/api/inventory' })
+  await server.register(productosRoutes, { prefix: '/api/productos' })
+  await server.register(inventarioRoutes, { prefix: '/api/inventario' })
   await server.register(salesRoutes, { prefix: '/api/sales' })
   await server.register(reportsRoutes, { prefix: '/api/reports' })
   await server.register(logisticsRoutes, { prefix: '/api/logistics' })

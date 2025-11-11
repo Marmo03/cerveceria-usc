@@ -1,6 +1,39 @@
-// Controlador de Productos - API Facade
-// Endpoints: GET /productos, POST /productos, PUT /productos/:id, DELETE /produtos/:id
-// GET /productos/:id/politica, POST /productos/:id/politica
+/**
+ * Controlador de Productos
+ *
+ * Proporciona endpoints REST para la gestión completa del catálogo de productos.
+ * Implementa el patrón API Facade, exponiendo los casos de uso del dominio a través de HTTP.
+ *
+ * Arquitectura:
+ * - Controller (HTTP Layer) → Use Cases (Application Layer) → Repository (Infrastructure Layer)
+ * - Validación con Zod para request/response
+ * - Manejo de errores centralizado
+ *
+ * Endpoints disponibles:
+ * - GET    /productos              → Listar productos con filtros y paginación
+ * - GET    /productos/:id          → Obtener detalle de producto por ID
+ * - POST   /productos              → Crear nuevo producto
+ * - PUT    /productos/:id          → Actualizar producto existente
+ * - DELETE /productos/:id          → Eliminar producto (soft delete)
+ * - GET    /productos/:id/politica → Obtener política de reabastecimiento
+ * - POST   /productos/:id/politica → Configurar política de reabastecimiento
+ *
+ * Filtros soportados:
+ * - categoria: Filtrar por categoría
+ * - isActive: Solo productos activos/inactivos
+ * - stockBajo: Productos con stock bajo
+ * - proveedorId: Productos de un proveedor específico
+ * - busqueda: Búsqueda por SKU o nombre
+ * - page/limit: Paginación
+ *
+ * Estrategias de reabastecimiento soportadas:
+ * - EOQ (Economic Order Quantity)
+ * - MANUAL (Reorden manual)
+ * - JIT (Just-in-Time) [futuro]
+ * - FIXED_QUANTITY (Cantidad fija) [futuro]
+ *
+ * @module controllers/productos
+ */
 
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
