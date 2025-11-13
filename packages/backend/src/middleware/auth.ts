@@ -2,7 +2,10 @@ import { FastifyRequest, FastifyReply } from 'fastify'
 import { AuthenticatedUser } from '../types/auth.js'
 
 // Middleware de autenticación JWT
-export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
+export async function authenticate(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
   try {
     // Verificar que el header Authorization existe
     const authHeader = request.headers.authorization
@@ -31,7 +34,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
     }
 
     // Agregar información del usuario al request
-    request.user = decoded
+    request.currentUser = decoded
   } catch (error) {
     return reply.status(401).send({
       success: false,
@@ -43,16 +46,21 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
 // Middleware para verificar permisos específicos
 export function requireRole(allowedRoles: string[]) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    await authenticate(request, reply)
-    
-    if (!request.user) {
+    // NO llamar a authenticate aquí - ya se llama en preHandler
+    if (!request.currentUser) {
       return reply.status(401).send({
         success: false,
         message: 'No autenticado',
       })
     }
 
-    if (!allowedRoles.includes(request.user.roleName)) {
+    // Comparación case-insensitive
+    const userRole = request.currentUser.roleName.toUpperCase()
+    const hasPermission = allowedRoles.some(
+      (role) => role.toUpperCase() === userRole
+    )
+
+    if (!hasPermission) {
       return reply.status(403).send({
         success: false,
         message: 'Sin permisos suficientes',
@@ -62,10 +70,13 @@ export function requireRole(allowedRoles: string[]) {
 }
 
 // Middleware para verificar que el usuario esté activo
-export async function requireActiveUser(request: FastifyRequest, reply: FastifyReply) {
+export async function requireActiveUser(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
   await authenticate(request, reply)
-  
-  if (!request.user) {
+
+  if (!request.currentUser) {
     return reply.status(401).send({
       success: false,
       message: 'No autenticado',
@@ -75,7 +86,7 @@ export async function requireActiveUser(request: FastifyRequest, reply: FastifyR
   try {
     // Verificar que el usuario sigue activo en la base de datos
     const user = await request.server.prisma.user.findUnique({
-      where: { id: request.user.userId },
+      where: { id: request.currentUser.userId },
       select: { isActive: true },
     })
 

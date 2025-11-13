@@ -379,6 +379,11 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-if="topProducts.length === 0">
+                <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                  No hay datos disponibles para el período seleccionado
+                </td>
+              </tr>
               <tr
                 v-for="producto in topProducts"
                 :key="producto.id"
@@ -401,7 +406,7 @@
                   </span>
                 </td>
                 <td class="table-cell">
-                  {{ producto.stockPromedio }} {{ producto.unidad }}
+                  {{ producto.stockActual }} {{ producto.unidad }}
                 </td>
                 <td class="table-cell font-medium">
                   ${{ formatPrice(producto.valorMovido) }}
@@ -420,7 +425,29 @@
           </h3>
         </div>
         <div class="p-6">
-          <div class="space-y-4">
+          <div
+            v-if="alerts.length === 0"
+            class="text-center py-8 text-gray-500"
+          >
+            <svg
+              class="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p class="mt-2">No hay alertas en este momento</p>
+            <p class="text-sm text-gray-400">
+              Todo está funcionando correctamente
+            </p>
+          </div>
+          <div v-else class="space-y-4">
             <div
               v-for="alert in alerts"
               :key="alert.id"
@@ -484,98 +511,41 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
+import { useReportsStore } from "../stores/reports";
 import AppLayout from "../components/AppLayout.vue";
 
 const authStore = useAuthStore();
+const reportsStore = useReportsStore();
 
 // Estado reactivo
-const loading = ref(false);
 const selectedPeriod = ref("30d");
 const customPeriod = ref({
   from: "",
   to: "",
 });
 
-// KPIs principales
-const kpis = ref({
-  rotacionInventario: 8.5,
-  stockoutRate: 2.3,
-  costoInventario: 42500000,
-  tiempoAprobacion: 2.1,
-});
-
-// Productos con mayor rotación
-const topProducts = ref([
-  {
-    id: 1,
-    codigo: "MP001",
-    nombre: "Malta Pilsner",
-    categoria: "Materia Prima",
-    movimientos: 45,
-    rotacion: 12.5,
-    stockPromedio: 350,
-    unidad: "kg",
-    valorMovido: 8750000,
-  },
-  {
-    id: 2,
-    codigo: "PT001",
-    nombre: "Cerveza IPA",
-    categoria: "Producto Terminado",
-    movimientos: 32,
-    rotacion: 9.8,
-    stockPromedio: 150,
-    unidad: "unidades",
-    valorMovido: 4200000,
-  },
-  {
-    id: 3,
-    codigo: "EMP001",
-    nombre: "Botella 355ml",
-    categoria: "Empaque",
-    movimientos: 28,
-    rotacion: 7.2,
-    stockPromedio: 800,
-    unidad: "unidades",
-    valorMovido: 1260000,
-  },
-]);
-
-// Alertas y recomendaciones
-const alerts = ref([
-  {
-    id: 1,
-    type: "warning",
-    title: "Stock crítico detectado",
-    description:
-      "El Lúpulo Cascade está por debajo del stock mínimo. Se recomienda generar orden de compra.",
-    action: "Ver productos críticos",
-  },
-  {
-    id: 2,
-    type: "info",
-    title: "Optimización sugerida",
-    description:
-      "La rotación de inventario ha mejorado un 15% este mes. Considerar ajustar políticas de reabastecimiento.",
-    action: "Ver análisis detallado",
-  },
-  {
-    id: 3,
-    type: "success",
-    title: "Meta alcanzada",
-    description:
-      "El tiempo promedio de aprobación se redujo a 2.1 días, cumpliendo la meta de menos de 3 días.",
-    action: "Ver métricas de aprobación",
-  },
-]);
+// Computed
+const loading = computed(() => reportsStore.loading);
+const kpis = computed(() => reportsStore.kpis);
+const topProducts = computed(() => reportsStore.topProducts);
+const alerts = computed(() => reportsStore.alertas);
 
 // Métodos
-const loadData = () => {
-  loading.value = true;
-  // TODO: Cargar datos según período seleccionado
-  setTimeout(() => {
-    loading.value = false;
-  }, 1000);
+const loadData = async () => {
+  const params: any = {};
+
+  if (selectedPeriod.value === "custom") {
+    if (customPeriod.value.from) {
+      params.desde = new Date(customPeriod.value.from);
+    }
+    if (customPeriod.value.to) {
+      params.hasta = new Date(customPeriod.value.to);
+    }
+  } else {
+    params.periodo = selectedPeriod.value;
+  }
+
+  await reportsStore.fetchAllData(params);
 };
 
 const refreshData = () => {
@@ -583,8 +553,7 @@ const refreshData = () => {
 };
 
 const exportReport = () => {
-  console.log("Exportar reporte");
-  // TODO: Implementar exportación a PDF/Excel
+  reportsStore.exportToCSV();
 };
 
 const getTrendClass = (current: number, target: number, inverse = false) => {

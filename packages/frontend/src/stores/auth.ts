@@ -23,6 +23,17 @@ export const useAuthStore = defineStore("auth", () => {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
+  // Restaurar usuario desde localStorage al inicializar
+  const storedUser = localStorage.getItem("auth_user");
+  if (storedUser) {
+    try {
+      user.value = JSON.parse(storedUser);
+    } catch (e) {
+      console.error("Error parsing stored user:", e);
+      localStorage.removeItem("auth_user");
+    }
+  }
+
   // Getters computados
   const isAuthenticated = computed(() => !!token.value && !!user.value);
 
@@ -32,11 +43,14 @@ export const useAuthStore = defineStore("auth", () => {
   });
 
   const hasRole = (role: string): boolean => {
-    return user.value?.roleName === role;
+    if (!user.value) return false;
+    return user.value.roleName.toUpperCase() === role.toUpperCase();
   };
 
   const hasAnyRole = (roles: string[]): boolean => {
-    return user.value ? roles.includes(user.value.roleName) : false;
+    if (!user.value) return false;
+    const userRoleUpper = user.value.roleName.toUpperCase();
+    return roles.some((role) => role.toUpperCase() === userRoleUpper);
   };
 
   const hasPermission = (permission: string): boolean => {
@@ -119,8 +133,9 @@ export const useAuthStore = defineStore("auth", () => {
           permissions: permissions,
         };
 
-        // Persistir token en localStorage
+        // Persistir token y usuario en localStorage
         localStorage.setItem("auth_token", authToken);
+        localStorage.setItem("auth_user", JSON.stringify(user.value));
 
         // Configurar axios
         setupAxiosInterceptor();
@@ -156,6 +171,7 @@ export const useAuthStore = defineStore("auth", () => {
 
     // Remover de localStorage
     localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
 
     // Redirigir al login
     window.location.href = "/login";

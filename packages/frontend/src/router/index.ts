@@ -10,6 +10,7 @@ import SolicitudesPage from "../pages/SolicitudesPage.vue";
 import LogisticaPage from "../pages/LogisticaPage.vue";
 import KPIsPage from "../pages/KPIsPage.vue";
 import PerfilPage from "../pages/PerfilPage.vue";
+import GestionUsuariosPage from "../pages/GestionUsuariosPage.vue";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -80,6 +81,15 @@ const router = createRouter({
       name: "Perfil",
       component: PerfilPage,
       meta: { requiresAuth: true },
+    },
+    {
+      path: "/usuarios",
+      name: "GestionUsuarios",
+      component: GestionUsuariosPage,
+      meta: {
+        requiresAuth: true,
+        roles: ["ADMIN"],
+      },
     },
   ],
 });

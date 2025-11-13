@@ -147,6 +147,30 @@
               </router-link>
             </li>
 
+            <!-- Gestión de Usuarios (solo ADMIN) -->
+            <li v-if="authStore.hasRole('ADMIN')">
+              <router-link
+                to="/usuarios"
+                class="nav-link"
+                active-class="nav-link-active"
+              >
+                <svg
+                  class="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                  />
+                </svg>
+                Gestión de Usuarios
+              </router-link>
+            </li>
+
             <!-- Logística -->
             <li v-if="authStore.hasAnyRole(['ADMIN', 'OPERARIO', 'ANALISTA'])">
               <router-link
@@ -397,16 +421,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useRouter } from "vue-router";
+import axios from "axios";
 
 const authStore = useAuthStore();
 const router = useRouter();
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+
 const sidebarOpen = ref(false);
 const userMenuOpen = ref(false);
-const pendingRequests = ref(2); // TODO: Obtener de API
+const pendingRequests = ref(0);
+
+// Solo cargar solicitudes pendientes si el usuario tiene el rol adecuado
+const shouldLoadRequests = computed(() =>
+  authStore.hasAnyRole(["ADMIN", "OPERARIO", "APROBADOR"])
+);
+
+const loadPendingRequests = async () => {
+  if (!shouldLoadRequests.value) return;
+
+  try {
+    const response = await axios.get(`${API_URL}/solicitudes`, {
+      params: { estado: "EN_APROBACION" },
+      headers: {
+        Authorization: `Bearer ${authStore.token}`,
+      },
+    });
+    pendingRequests.value = response.data.solicitudes?.length || 0;
+  } catch (error) {
+    console.error("Error al cargar solicitudes pendientes:", error);
+    pendingRequests.value = 0;
+  }
+};
 
 const handleLogout = () => {
   authStore.logout();
@@ -414,7 +463,9 @@ const handleLogout = () => {
 };
 
 onMounted(() => {
-  // TODO: Cargar datos de notificaciones y solicitudes pendientes
+  loadPendingRequests();
+  // Recargar cada 5 minutos
+  setInterval(loadPendingRequests, 300000);
 });
 </script>
 

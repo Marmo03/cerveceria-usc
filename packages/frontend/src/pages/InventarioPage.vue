@@ -268,10 +268,10 @@
                   </td>
                   <td class="table-cell">
                     <div class="font-medium text-gray-900">
-                      {{ movimiento.producto }}
+                      {{ movimiento.producto?.nombre || "Producto" }}
                     </div>
                     <div class="text-sm text-gray-500">
-                      {{ movimiento.codigoProducto }}
+                      {{ movimiento.producto?.sku || movimiento.productoId }}
                     </div>
                   </td>
                   <td class="table-cell">
@@ -281,14 +281,14 @@
                   </td>
                   <td class="table-cell">
                     <span :class="getCantidadClass(movimiento.tipo)">
-                      {{
-                        formatCantidad(movimiento.cantidad, movimiento.tipo)
-                      }}
-                      {{ movimiento.unidad }}
+                      {{ formatCantidad(movimiento.cantidad, movimiento.tipo) }}
+                      {{ movimiento.producto?.unidad || "und" }}
                     </span>
                   </td>
-                  <td class="table-cell">{{ movimiento.motivo }}</td>
-                  <td class="table-cell">{{ movimiento.usuario }}</td>
+                  <td class="table-cell">{{ movimiento.comentario || "-" }}</td>
+                  <td class="table-cell">
+                    {{ movimiento.usuario?.firstName || "Sistema" }}
+                  </td>
                   <td class="table-cell">
                     <span class="badge badge-success">Completado</span>
                   </td>
@@ -321,7 +321,7 @@
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
                 <tr
-                  v-for="item in stockItems"
+                  v-for="item in productsStore.productos"
                   :key="item.id"
                   class="hover:bg-gray-50"
                 >
@@ -329,33 +329,31 @@
                     <div class="font-medium text-gray-900">
                       {{ item.nombre }}
                     </div>
-                    <div class="text-sm text-gray-500">{{ item.codigo }}</div>
+                    <div class="text-sm text-gray-500">{{ item.sku }}</div>
                   </td>
                   <td class="table-cell">{{ item.categoria }}</td>
                   <td class="table-cell">
                     <span
-                      :class="getStockClass(item.stockActual, item.stockMinimo)"
+                      :class="getStockClass(item.stockActual, item.stockMin)"
                     >
                       {{ item.stockActual }} {{ item.unidad }}
                     </span>
                   </td>
                   <td class="table-cell">
-                    {{ item.stockMinimo }} {{ item.unidad }}
+                    {{ item.stockMin }} {{ item.unidad }}
                   </td>
                   <td class="table-cell">
                     <span
                       class="badge"
                       :class="
-                        getStockStatusClass(item.stockActual, item.stockMinimo)
+                        getStockStatusClass(item.stockActual, item.stockMin)
                       "
                     >
-                      {{ getStockStatus(item.stockActual, item.stockMinimo) }}
+                      {{ getStockStatus(item.stockActual, item.stockMin) }}
                     </span>
                   </td>
                   <td class="table-cell">
-                    <div class="text-sm text-gray-900">
-                      {{ formatDate(item.ultimoMovimiento) }}
-                    </div>
+                    <div class="text-sm text-gray-900">-</div>
                   </td>
                   <td class="table-cell">
                     <button
@@ -421,90 +419,44 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de Movimiento -->
+    <ModalMovimiento
+      v-model="showMovimientoModal"
+      @success="onMovimientoRegistrado"
+    />
   </AppLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
+import { useInventoryStore } from "../stores/inventory";
+import { useProductsStore } from "../stores/products";
 import AppLayout from "../components/AppLayout.vue";
+import ModalMovimiento from "../components/ModalMovimiento.vue";
 
 const authStore = useAuthStore();
+const inventoryStore = useInventoryStore();
+const productsStore = useProductsStore();
 
 // Estado reactivo
-const loading = ref(false);
+const loading = computed(() => inventoryStore.loading);
 const showMovimientoModal = ref(false);
 const activeTab = ref("movimientos");
 
-// Datos de ejemplo
-const movimientos = ref([
-  {
-    id: 1,
-    fecha: new Date("2024-01-15T10:30:00"),
-    producto: "Malta Pilsner",
-    codigoProducto: "MP001",
-    tipo: "ENTRADA",
-    cantidad: 100,
-    unidad: "kg",
-    motivo: "Compra a proveedor XYZ",
-    usuario: "Juan Pérez",
-  },
-  {
-    id: 2,
-    fecha: new Date("2024-01-15T14:15:00"),
-    producto: "Lúpulo Cascade",
-    codigoProducto: "MP002",
-    tipo: "SALIDA",
-    cantidad: 5,
-    unidad: "kg",
-    motivo: "Producción lote IPA-001",
-    usuario: "María García",
-  },
-  {
-    id: 3,
-    fecha: new Date("2024-01-15T16:45:00"),
-    producto: "Botella 355ml",
-    codigoProducto: "EMP001",
-    tipo: "ENTRADA",
-    cantidad: 500,
-    unidad: "unidades",
-    motivo: "Recepción pedido 2024-001",
-    usuario: "Carlos López",
-  },
-]);
+// Computed properties desde el store
+const movimientos = computed(() => inventoryStore.movimientos);
+const alertas = computed(() => inventoryStore.alertas);
+const resumen = computed(() => inventoryStore.resumen);
 
-const stockItems = ref([
-  {
-    id: 1,
-    codigo: "MP001",
-    nombre: "Malta Pilsner",
-    categoria: "Materia Prima",
-    stockActual: 500,
-    stockMinimo: 100,
-    unidad: "kg",
-    ultimoMovimiento: new Date("2024-01-15T10:30:00"),
-  },
-  {
-    id: 2,
-    codigo: "MP002",
-    nombre: "Lúpulo Cascade",
-    categoria: "Materia Prima",
-    stockActual: 25,
-    stockMinimo: 50,
-    unidad: "kg",
-    ultimoMovimiento: new Date("2024-01-15T14:15:00"),
-  },
-  {
-    id: 3,
-    codigo: "PT001",
-    nombre: "Cerveza IPA",
-    categoria: "Producto Terminado",
-    stockActual: 200,
-    stockMinimo: 50,
-    unidad: "unidades",
-    ultimoMovimiento: new Date("2024-01-14T09:00:00"),
-  },
-]);
+// Filtros del formulario de movimiento
+const nuevoMovimiento = ref({
+  productoId: "",
+  tipo: "ENTRADA" as "ENTRADA" | "SALIDA",
+  cantidad: 0,
+  comentario: "",
+});
 
 // Filtros
 const filters = ref({
@@ -514,52 +466,53 @@ const filters = ref({
   fechaHasta: "",
 });
 
-// Movimientos filtrados
-const filteredMovimientos = computed(() => {
-  return movimientos.value.filter((movimiento) => {
-    const matchesProducto =
-      !filters.value.producto ||
-      movimiento.producto
-        .toLowerCase()
-        .includes(filters.value.producto.toLowerCase()) ||
-      movimiento.codigoProducto
-        .toLowerCase()
-        .includes(filters.value.producto.toLowerCase());
+// Movimientos filtrados - simplificado, el filtrado se hace en el store
+const filteredMovimientos = computed(() => inventoryStore.movimientos);
 
-    const matchesTipo =
-      !filters.value.tipo || movimiento.tipo === filters.value.tipo;
-
-    const matchesFecha =
-      (!filters.value.fechaDesde ||
-        movimiento.fecha >= new Date(filters.value.fechaDesde)) &&
-      (!filters.value.fechaHasta ||
-        movimiento.fecha <= new Date(filters.value.fechaHasta));
-
-    return matchesProducto && matchesTipo && matchesFecha;
-  });
-});
-
-// Estadísticas
+// Estadísticas basadas en el store
 const stats = computed(() => ({
-  totalMovimientos: movimientos.value.length,
-  entradas: movimientos.value.filter(
-    (m) => m.tipo === "ENTRADA" && isToday(m.fecha)
-  ).length,
-  salidas: movimientos.value.filter(
-    (m) => m.tipo === "SALIDA" && isToday(m.fecha)
-  ).length,
-  alertas: stockItems.value.filter((s) => s.stockActual <= s.stockMinimo)
-    .length,
+  totalMovimientos: inventoryStore.movimientos.length,
+  entradas: inventoryStore.movimientosEntrada.length,
+  salidas: inventoryStore.movimientosSalida.length,
+  alertas: inventoryStore.alertas.length,
 }));
 
 // Métodos
-const resetFilters = () => {
+const loadInventoryData = async () => {
+  await Promise.all([
+    inventoryStore.fetchMovimientos(),
+    inventoryStore.fetchAlertas(),
+    inventoryStore.fetchResumen(),
+    productsStore.fetchProductos(),
+  ]);
+};
+
+const registrarMovimiento = async () => {
+  try {
+    await inventoryStore.registrarMovimiento(nuevoMovimiento.value);
+    showMovimientoModal.value = false;
+    nuevoMovimiento.value = {
+      productoId: "",
+      tipo: "ENTRADA",
+      cantidad: 0,
+      comentario: "",
+    };
+    await loadInventoryData();
+  } catch (error) {
+    console.error("Error al registrar movimiento:", error);
+    alert("Error al registrar el movimiento");
+  }
+};
+
+const resetFilters = async () => {
   filters.value = {
     producto: "",
     tipo: "",
     fechaDesde: "",
     fechaHasta: "",
   };
+  inventoryStore.clearFiltros();
+  await inventoryStore.fetchMovimientos();
 };
 
 const getTipoClass = (tipo: string) => {
@@ -603,7 +556,9 @@ const formatCantidad = (cantidad: number, tipo: string) => {
   return `${prefix}${cantidad}`;
 };
 
-const formatDate = (date: Date) => {
+const formatDate = (dateString: string | Date) => {
+  const date =
+    typeof dateString === "string" ? new Date(dateString) : dateString;
   return new Intl.DateTimeFormat("es-CO", {
     day: "2-digit",
     month: "2-digit",
@@ -611,7 +566,9 @@ const formatDate = (date: Date) => {
   }).format(date);
 };
 
-const formatTime = (date: Date) => {
+const formatTime = (dateString: string | Date) => {
+  const date =
+    typeof dateString === "string" ? new Date(dateString) : dateString;
   return new Intl.DateTimeFormat("es-CO", {
     hour: "2-digit",
     minute: "2-digit",
@@ -628,8 +585,13 @@ const ajustarStock = (item: any) => {
   // TODO: Implementar modal de ajuste de stock
 };
 
-onMounted(() => {
-  // TODO: Cargar datos desde API
+const onMovimientoRegistrado = async () => {
+  // Recargar datos después de registrar un movimiento
+  await loadInventoryData();
+};
+
+onMounted(async () => {
+  await loadInventoryData();
 });
 </script>
 

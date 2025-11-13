@@ -1,0 +1,2 @@
+2025-11-10 23:02:38 -05 LOG:  redirigiendo la salida del registro al proceso recolector de registro
+2025-11-10 23:02:38 -05 HINT:  La salida futura del registro aparecerá en el directorio «log».

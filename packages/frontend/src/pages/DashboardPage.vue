@@ -367,6 +367,29 @@
             </svg>
             <span class="text-sm font-medium text-gray-900">Ver KPIs</span>
           </router-link>
+
+          <router-link
+            v-if="authStore.hasRole('ADMIN')"
+            to="/usuarios"
+            class="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
+          >
+            <svg
+              class="h-8 w-8 text-gray-400 mb-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+              />
+            </svg>
+            <span class="text-sm font-medium text-gray-900"
+              >Gestionar Usuarios</span
+            >
+          </router-link>
         </div>
       </div>
     </div>
@@ -374,63 +397,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
+import { useProductsStore } from "../stores/products";
+import { useInventoryStore } from "../stores/inventory";
 import AppLayout from "../components/AppLayout.vue";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 const authStore = useAuthStore();
+const productsStore = useProductsStore();
+const inventoryStore = useInventoryStore();
 
 // Estado reactivo
-const stats = ref({
-  totalProductos: 0,
-  stockBajo: 0,
-  solicitudesPendientes: 0,
-  valorInventario: 0,
+const loading = ref(false);
+
+// Computed stats desde los stores
+const stats = computed(() => ({
+  totalProductos: productsStore.productos.length,
+  stockBajo: productsStore.productosStockBajo.length,
+  solicitudesPendientes: inventoryStore.alertasAlta.length,
+  valorInventario: inventoryStore.resumen?.valorTotalInventario || 0,
+}));
+
+// Alertas basadas en el store de inventario
+const alerts = computed(() => {
+  return inventoryStore.alertasAlta.map((alerta) => ({
+    id: alerta.productoId,
+    message: `${alerta.nombre}: Stock crítico (${alerta.stockActual}/${alerta.stockMinimo} unidades)`,
+    type: "warning",
+  }));
 });
 
-const alerts = ref([
-  {
-    id: 1,
-    message: "3 productos con stock crítico requieren atención inmediata",
-    type: "warning",
-  },
-]);
+// Últimos movimientos desde el store
+const ultimosMovimientos = computed(() => {
+  return inventoryStore.movimientos.slice(0, 5);
+});
 
-const ultimosMovimientos = ref([
-  {
-    id: 1,
-    producto: "Malta Base Pilsner",
-    tipo: "SALIDA",
-    cantidad: 50,
-    fecha: new Date(),
-  },
-  {
-    id: 2,
-    producto: "Lúpulo Cascade",
-    tipo: "ENTRADA",
-    cantidad: 200,
-    fecha: new Date(Date.now() - 3600000),
-  },
-]);
-
-const productosStockBajo = ref([
-  {
-    id: 1,
-    nombre: "Etiquetas Cerveza Artesanal",
-    sku: "ETIQ-001",
-    stockActual: 15,
-    stockMin: 100,
-  },
-  {
-    id: 2,
-    nombre: "Levadura Ale US-05",
-    sku: "LEVAD-001",
-    stockActual: 8,
-    stockMin: 20,
-  },
-]);
+// Productos con stock bajo desde el store
+const productosStockBajo = computed(() => {
+  return productsStore.productosStockBajo.slice(0, 5);
+});
 
 const currentDate = ref("");
 
@@ -442,22 +449,31 @@ const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
-const formatDate = (date: Date): string => {
+const formatDate = (dateString: string | Date): string => {
+  const date =
+    typeof dateString === "string" ? new Date(dateString) : dateString;
   return format(date, "dd/MM/yyyy HH:mm", { locale: es });
 };
 
-const dismissAlert = (id: number) => {
-  alerts.value = alerts.value.filter((alert) => alert.id !== id);
+const dismissAlert = (id: string) => {
+  // Las alertas son computed, no se pueden modificar directamente
+  console.log("Dismissing alert:", id);
 };
 
 const loadDashboardData = async () => {
-  // TODO: Cargar datos reales desde la API
-  stats.value = {
-    totalProductos: 25,
-    stockBajo: 3,
-    solicitudesPendientes: 2,
-    valorInventario: 45000,
-  };
+  loading.value = true;
+  try {
+    await Promise.all([
+      productsStore.fetchProductos(),
+      inventoryStore.fetchMovimientos(),
+      inventoryStore.fetchAlertas(),
+      inventoryStore.fetchResumen(),
+    ]);
+  } catch (error) {
+    console.error("Error cargando datos del dashboard:", error);
+  } finally {
+    loading.value = false;
+  }
 };
 
 onMounted(async () => {

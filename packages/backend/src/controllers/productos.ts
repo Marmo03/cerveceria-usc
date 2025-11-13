@@ -55,12 +55,12 @@ const ActualizarProductoSchema = CrearProductoSchema.partial()
 
 const FiltrosProductoSchema = z.object({
   categoria: z.string().optional(),
-  isActive: z.boolean().optional(),
-  stockBajo: z.boolean().optional(),
+  isActive: z.coerce.boolean().optional(),
+  stockBajo: z.coerce.boolean().optional(),
   proveedorId: z.string().optional(),
   busqueda: z.string().optional(),
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(100).default(20),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 })
 
 const CrearPoliticaSchema = z.object({
@@ -91,7 +91,6 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
         tags: ['productos'],
         summary: 'Listar productos',
         description: 'Obtiene lista de productos con filtros opcionales',
-        querystring: FiltrosProductoSchema,
         response: {
           200: {
             type: 'object',
@@ -134,12 +133,67 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         const filtros = FiltrosProductoSchema.parse(request.query)
 
-        // TODO: Inyectar casos de uso correctamente
-        // const productos = await obtenerProductosUC.execute(filtros);
+        // Construir filtros de Prisma
+        const where: any = {}
 
-        // Por ahora, respuesta mock
-        const productos = []
-        const total = 0
+        if (filtros.categoria) {
+          where.categoria = filtros.categoria
+        }
+
+        if (filtros.isActive !== undefined) {
+          where.isActive = filtros.isActive
+        }
+
+        if (filtros.proveedorId) {
+          where.proveedorId = filtros.proveedorId
+        }
+
+        if (filtros.busqueda) {
+          where.OR = [
+            { sku: { contains: filtros.busqueda, mode: 'insensitive' } },
+            { nombre: { contains: filtros.busqueda, mode: 'insensitive' } },
+          ]
+        }
+
+        // El filtro de stock bajo se maneja después de obtener los datos
+        // ya que requiere comparación con campo de la misma tabla
+
+        // Calcular paginación
+        const skip = (filtros.page - 1) * filtros.limit
+        const take = filtros.limit
+
+        // Obtener productos y total
+        const [productosRaw, total] = await Promise.all([
+          fastify.prisma.producto.findMany({
+            where,
+            skip,
+            take,
+            orderBy: { createdAt: 'desc' },
+            include: {
+              proveedor: {
+                select: {
+                  id: true,
+                  nombre: true,
+                  email: true,
+                },
+              },
+              politicaAbastecimiento: {
+                select: {
+                  estrategia: true,
+                  rop: true,
+                  stockSeguridad: true,
+                },
+              },
+            },
+          }),
+          fastify.prisma.producto.count({ where }),
+        ])
+
+        // Aplicar filtro de stock bajo si se requiere
+        let productos = productosRaw
+        if (filtros.stockBajo) {
+          productos = productosRaw.filter((p) => p.stockActual <= p.stockMin)
+        }
 
         return {
           productos,
@@ -150,7 +204,7 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
             pages: Math.ceil(total / filtros.limit),
           },
         }
-      } catch (error) {
+      } catch (error: any) {
         request.log.error(error)
         return reply.status(500).send({
           error: 'Error interno del servidor',
@@ -208,15 +262,30 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         const { id } = request.params
 
-        // TODO: Usar caso de uso
-        // const producto = await obtenerProductoPorIdUC.execute(id);
-
-        // Mock response
-        return reply.status(404).send({
-          error: 'No encontrado',
-          message: `Producto con ID ${id} no encontrado`,
+        const producto = await fastify.prisma.producto.findUnique({
+          where: { id },
+          include: {
+            proveedor: {
+              select: {
+                id: true,
+                nombre: true,
+                email: true,
+                telefono: true,
+              },
+            },
+            politicaAbastecimiento: true,
+          },
         })
-      } catch (error) {
+
+        if (!producto) {
+          return reply.status(404).send({
+            error: 'No encontrado',
+            message: `Producto con ID ${id} no encontrado`,
+          })
+        }
+
+        return producto
+      } catch (error: any) {
         request.log.error(error)
         return reply.status(500).send({
           error: 'Error interno del servidor',
@@ -232,11 +301,14 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
   }>(
     '/',
     {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(['ADMIN', 'OPERARIO']),
+      ],
       schema: {
         tags: ['productos'],
         summary: 'Crear nuevo producto',
         description: 'Crea un nuevo producto en el sistema',
-        body: CrearProductoSchema,
         response: {
           201: {
             type: 'object',
@@ -265,42 +337,56 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       },
-      preHandler: [
-        fastify.authenticate,
-        fastify.authorize(['ADMIN', 'OPERARIO']),
-      ],
     },
     async (request, reply) => {
       try {
         const datosProducto = CrearProductoSchema.parse(request.body)
 
-        // TODO: Usar caso de uso
-        // const producto = await crearProductoUC.execute({
-        //   ...datosProducto,
-        //   usuarioId: request.user.id
-        // });
+        // Verificar que el SKU no exista
+        const existente = await fastify.prisma.producto.findUnique({
+          where: { sku: datosProducto.sku },
+        })
+
+        if (existente) {
+          return reply.status(409).send({
+            error: 'Producto duplicado',
+            message: `Ya existe un producto con el SKU: ${datosProducto.sku}`,
+          })
+        }
+
+        // Crear el producto
+        const producto = await fastify.prisma.producto.create({
+          data: {
+            sku: datosProducto.sku,
+            nombre: datosProducto.nombre,
+            categoria: datosProducto.categoria,
+            unidad: datosProducto.unidad,
+            costo: datosProducto.costo,
+            stockActual: datosProducto.stockActual,
+            stockMin: datosProducto.stockMin,
+            leadTime: datosProducto.leadTime,
+            proveedorId: datosProducto.proveedorId,
+          },
+        })
+
+        request.log.info(
+          { productoId: producto.id },
+          'Producto creado exitosamente'
+        )
 
         return reply.status(201).send({
-          id: 'mock-id',
-          sku: datosProducto.sku,
-          nombre: datosProducto.nombre,
-          categoria: datosProducto.categoria,
+          id: producto.id,
+          sku: producto.sku,
+          nombre: producto.nombre,
+          categoria: producto.categoria,
           mensaje: 'Producto creado exitosamente',
         })
-      } catch (error) {
+      } catch (error: any) {
         if (error.name === 'ZodError') {
           return reply.status(400).send({
             error: 'Datos inválidos',
             message: 'Los datos proporcionados no son válidos',
             details: error.issues,
-          })
-        }
-
-        // TODO: Manejar errores específicos de dominio
-        if (error.code === 'DUPLICATE') {
-          return reply.status(409).send({
-            error: 'Producto duplicado',
-            message: error.message,
           })
         }
 
@@ -320,6 +406,10 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
   }>(
     '/:id',
     {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(['ADMIN', 'OPERARIO']),
+      ],
       schema: {
         tags: ['productos'],
         summary: 'Actualizar producto',
@@ -330,7 +420,6 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
           },
           required: ['id'],
         },
-        body: ActualizarProductoSchema,
         response: {
           200: {
             type: 'object',
@@ -348,28 +437,62 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       },
-      preHandler: [
-        fastify.authenticate,
-        fastify.authorize(['ADMIN', 'OPERARIO']),
-      ],
     },
     async (request, reply) => {
       try {
         const { id } = request.params
         const datosActualizacion = ActualizarProductoSchema.parse(request.body)
 
-        // TODO: Usar caso de uso
-        // const producto = await actualizarProductoUC.execute(id, datosActualizacion);
+        // Verificar que el producto existe
+        const productoExistente = await fastify.prisma.producto.findUnique({
+          where: { id },
+        })
 
-        return {
-          id,
-          mensaje: 'Producto actualizado exitosamente',
-        }
-      } catch (error) {
-        if (error.code === 'NOT_FOUND') {
+        if (!productoExistente) {
           return reply.status(404).send({
             error: 'No encontrado',
-            message: error.message,
+            message: `Producto con ID ${id} no encontrado`,
+          })
+        }
+
+        // Si se actualiza el SKU, verificar que no exista
+        if (
+          datosActualizacion.sku &&
+          datosActualizacion.sku !== productoExistente.sku
+        ) {
+          const skuExistente = await fastify.prisma.producto.findUnique({
+            where: { sku: datosActualizacion.sku },
+          })
+
+          if (skuExistente) {
+            return reply.status(409).send({
+              error: 'Conflicto',
+              message: `Ya existe un producto con el SKU: ${datosActualizacion.sku}`,
+            })
+          }
+        }
+
+        // Actualizar producto
+        const productoActualizado = await fastify.prisma.producto.update({
+          where: { id },
+          data: datosActualizacion,
+        })
+
+        request.log.info(
+          { productoId: id },
+          'Producto actualizado exitosamente'
+        )
+
+        return {
+          id: productoActualizado.id,
+          mensaje: 'Producto actualizado exitosamente',
+        }
+      } catch (error: any) {
+        if (error.name === 'ZodError') {
+          return reply.status(400).send({
+            error: 'Datos inválidos',
+            message: 'Los datos proporcionados no son válidos',
+            details: error.issues,
           })
         }
 
@@ -388,6 +511,7 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
   }>(
     '/:id',
     {
+      preHandler: [fastify.authenticate, fastify.requireRole(['ADMIN'])],
       schema: {
         tags: ['productos'],
         summary: 'Eliminar producto',
@@ -408,17 +532,36 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       },
-      preHandler: [fastify.authenticate, fastify.authorize(['ADMIN'])],
     },
     async (request, reply) => {
       try {
         const { id } = request.params
 
-        // TODO: Usar caso de uso
-        // await eliminarProductoUC.execute(id);
+        // Verificar que el producto existe
+        const producto = await fastify.prisma.producto.findUnique({
+          where: { id },
+        })
+
+        if (!producto) {
+          return reply.status(404).send({
+            error: 'No encontrado',
+            message: `Producto con ID ${id} no encontrado`,
+          })
+        }
+
+        // Soft delete - desactivar el producto
+        await fastify.prisma.producto.update({
+          where: { id },
+          data: { isActive: false },
+        })
+
+        request.log.info(
+          { productoId: id },
+          'Producto eliminado (desactivado) exitosamente'
+        )
 
         return { mensaje: 'Producto eliminado exitosamente' }
-      } catch (error) {
+      } catch (error: any) {
         request.log.error(error)
         return reply.status(500).send({
           error: 'Error interno del servidor',
@@ -467,20 +610,35 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       },
-      preHandler: [fastify.authenticate],
     },
     async (request, reply) => {
       try {
         const { id } = request.params
 
-        // TODO: Usar caso de uso
-        // const politica = await obtenerPoliticaUC.execute(id);
+        // Buscar política de reabastecimiento
+        const politica = await fastify.prisma.politicaAbastecimiento.findUnique(
+          {
+            where: { productoId: id },
+            include: {
+              producto: {
+                select: {
+                  sku: true,
+                  nombre: true,
+                },
+              },
+            },
+          }
+        )
 
-        return reply.status(404).send({
-          error: 'No encontrado',
-          message: 'No existe política de abastecimiento para este producto',
-        })
-      } catch (error) {
+        if (!politica) {
+          return reply.status(404).send({
+            error: 'No encontrado',
+            message: 'No existe política de abastecimiento para este producto',
+          })
+        }
+
+        return politica
+      } catch (error: any) {
         request.log.error(error)
         return reply.status(500).send({
           error: 'Error interno del servidor',
@@ -497,6 +655,10 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
   }>(
     '/:id/politica',
     {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(['ADMIN', 'OPERARIO']),
+      ],
       schema: {
         tags: ['productos'],
         summary: 'Crear política de abastecimiento',
@@ -507,7 +669,6 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
           },
           required: ['id'],
         },
-        body: CrearPoliticaSchema,
         response: {
           201: {
             type: 'object',
@@ -525,32 +686,66 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
           },
         },
       },
-      preHandler: [
-        fastify.authenticate,
-        fastify.authorize(['ADMIN', 'ANALISTA']),
-      ],
     },
     async (request, reply) => {
       try {
         const { id } = request.params
         const datosPolitica = CrearPoliticaSchema.parse(request.body)
 
-        // TODO: Usar caso de uso
-        // const politica = await crearPoliticaUC.execute({
-        //   productoId: id,
-        //   ...datosPolitica
-        // });
-
-        return reply.status(201).send({
-          id: 'mock-politica-id',
-          mensaje: 'Política de abastecimiento creada exitosamente',
+        // Verificar que el producto existe
+        const producto = await fastify.prisma.producto.findUnique({
+          where: { id },
         })
-      } catch (error) {
-        if (error.code === 'DUPLICATE') {
+
+        if (!producto) {
+          return reply.status(404).send({
+            error: 'No encontrado',
+            message: `Producto con ID ${id} no encontrado`,
+          })
+        }
+
+        // Verificar que no exista una política ya
+        const politicaExistente =
+          await fastify.prisma.politicaAbastecimiento.findUnique({
+            where: { productoId: id },
+          })
+
+        if (politicaExistente) {
           return reply.status(409).send({
             error: 'Política existente',
             message:
               'Ya existe una política de abastecimiento para este producto',
+          })
+        }
+
+        // Crear política
+        const politica = await fastify.prisma.politicaAbastecimiento.create({
+          data: {
+            productoId: id,
+            estrategia: datosPolitica.estrategia,
+            rop: datosPolitica.rop,
+            stockSeguridad: datosPolitica.stockSeguridad,
+            parametrosJSON: datosPolitica.parametrosJSON
+              ? JSON.stringify(datosPolitica.parametrosJSON)
+              : null,
+          },
+        })
+
+        request.log.info(
+          { productoId: id, politicaId: politica.id },
+          'Política creada exitosamente'
+        )
+
+        return reply.status(201).send({
+          id: politica.id,
+          mensaje: 'Política de abastecimiento creada exitosamente',
+        })
+      } catch (error: any) {
+        if (error.name === 'ZodError') {
+          return reply.status(400).send({
+            error: 'Datos inválidos',
+            message: 'Los datos proporcionados no son válidos',
+            details: error.issues,
           })
         }
 

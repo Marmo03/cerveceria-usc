@@ -79,10 +79,13 @@ async function main() {
 
   // Crear usuarios de prueba
   const hashedPassword = await bcrypt.hash('123456', 12)
-  
+
+  // ADMIN - Actualizar siempre para asegurar password correcto
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@cerveceria-usc.edu.co' },
-    update: {},
+    update: {
+      password: hashedPassword, // Actualizar password en cada seed
+    },
     create: {
       email: 'admin@cerveceria-usc.edu.co',
       password: hashedPassword,
@@ -147,7 +150,7 @@ async function main() {
       costo: 8500,
     },
     {
-      sku: 'CERV-002', 
+      sku: 'CERV-002',
       nombre: 'Cerveza Artesanal Lager',
       categoria: 'Producto Terminado',
       unidad: 'L',

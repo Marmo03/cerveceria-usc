@@ -14,6 +14,18 @@ import inventarioRoutes from './controllers/inventario.js'
 import salesRoutes from './controllers/sales.js'
 import reportsRoutes from './controllers/reports.js'
 import logisticsRoutes from './controllers/logistics.js'
+import solicitudesRoutes from './controllers/solicitudes.js'
+import usuariosRoutes from './controllers/usuarios.js'
+
+// Importar middleware de autenticación
+import {
+  authenticate,
+  requireRole,
+  requireActiveUser,
+} from './middleware/auth.js'
+
+// Importar tipos
+import { AuthenticatedUser } from './types/auth.js'
 
 // Configuración del servidor
 const server: FastifyInstance = Fastify({
@@ -36,6 +48,11 @@ const prisma = new PrismaClient({
 
 // Decorar Fastify con Prisma para acceso global
 server.decorate('prisma', prisma)
+
+// Decorar Fastify con funciones de autenticación
+server.decorate('authenticate', authenticate)
+server.decorate('requireRole', requireRole)
+server.decorate('requireActiveUser', requireActiveUser)
 
 // Configurar plugins de seguridad
 async function configurePlugins() {
@@ -93,6 +110,14 @@ async function configurePlugins() {
           name: 'logistics',
           description: 'Gestión de logística y rastreo de envíos',
         },
+        {
+          name: 'Solicitudes',
+          description: 'Gestión de solicitudes de compra',
+        },
+        {
+          name: 'Usuarios',
+          description: 'Gestión de usuarios y roles (solo ADMIN)',
+        },
       ],
     },
   })
@@ -126,6 +151,8 @@ async function configureRoutes() {
   await server.register(salesRoutes, { prefix: '/api/sales' })
   await server.register(reportsRoutes, { prefix: '/api/reports' })
   await server.register(logisticsRoutes, { prefix: '/api/logistics' })
+  await server.register(solicitudesRoutes, { prefix: '/api/solicitudes' })
+  await server.register(usuariosRoutes, { prefix: '/api/usuarios' })
 }
 
 // Verificar salud de la base de datos
@@ -199,6 +226,12 @@ process.on('SIGTERM', () => server.close())
 declare module 'fastify' {
   interface FastifyInstance {
     prisma: PrismaClient
+    authenticate: typeof authenticate
+    requireRole: typeof requireRole
+    requireActiveUser: typeof requireActiveUser
+  }
+  interface FastifyRequest {
+    currentUser?: AuthenticatedUser
   }
 }
 

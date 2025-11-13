@@ -35,16 +35,19 @@
 
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
-import {
-  PaginationSchema,
-  validateZodSchema,
-  successResponse,
-  errorResponse,
-} from '../types/api.js'
+
+// Schema de paginación
+const PaginationSchema = z.object({
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+})
 
 // Schemas de validación
 const RegistrarMovimientoSchema = z.object({
-  productoId: z.string().uuid('ID de producto debe ser un UUID válido'),
+  productoId: z
+    .string()
+    .min(1, 'ID de producto es requerido')
+    .regex(/^c[a-z0-9]{24}$/i, 'ID de producto debe ser un CUID válido'),
   tipo: z.enum(['ENTRADA', 'SALIDA'], {
     errorMap: () => ({ message: 'Tipo debe ser ENTRADA o SALIDA' }),
   }),
@@ -76,6 +79,10 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
   }>(
     '/movimientos',
     {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(['ADMIN', 'OPERARIO']),
+      ],
       schema: {
         tags: ['inventario'],
         summary: 'Registrar movimiento de inventario',
@@ -145,66 +152,128 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       try {
         // Validar datos de entrada
-        const datosMovimiento = validateZodSchema(
-          RegistrarMovimientoSchema,
-          request.body
-        )
+        const datosMovimiento = RegistrarMovimientoSchema.parse(request.body)
 
-        // TODO: Obtener usuario del contexto de autenticación
-        const usuarioId = 'mock-user-id' // request.user?.id
+        // Obtener usuario del contexto de autenticación
+        const usuarioId = request.currentUser?.userId
 
-        // TODO: Usar caso de uso correspondiente
-        // const resultado = await registrarMovimientoUC.execute({
-        //   ...datosMovimiento,
-        //   usuarioId
-        // });
+        if (!usuarioId) {
+          return reply.status(401).send({
+            success: false,
+            error: 'No autenticado',
+          })
+        }
 
-        // Mock response por ahora
-        const mockResultado = {
-          movimiento: {
-            id: 'mov-123',
+        // Verificar que el producto existe
+        const producto = await fastify.prisma.producto.findUnique({
+          where: { id: datosMovimiento.productoId },
+        })
+
+        if (!producto) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Producto no encontrado',
+          })
+        }
+
+        const stockAnterior = producto.stockActual
+
+        // Validar stock suficiente para salidas
+        if (datosMovimiento.tipo === 'SALIDA') {
+          if (producto.stockActual < datosMovimiento.cantidad) {
+            return reply.status(409).send({
+              success: false,
+              error: 'Stock insuficiente',
+              details: [
+                {
+                  message: `Stock actual: ${producto.stockActual}, solicitado: ${datosMovimiento.cantidad}`,
+                },
+              ],
+            })
+          }
+        }
+
+        // Calcular nuevo stock
+        const stockNuevo =
+          datosMovimiento.tipo === 'ENTRADA'
+            ? stockAnterior + datosMovimiento.cantidad
+            : stockAnterior - datosMovimiento.cantidad
+
+        // Usar transacción para garantizar consistencia
+        const resultado = await fastify.prisma.$transaction(async (prisma) => {
+          // Crear el movimiento
+          const movimiento = await prisma.movimientoInventario.create({
+            data: {
+              productoId: datosMovimiento.productoId,
+              tipo: datosMovimiento.tipo,
+              cantidad: datosMovimiento.cantidad,
+              usuarioId,
+              comentario: datosMovimiento.comentario,
+              referencia: datosMovimiento.referencia,
+              fecha: new Date(),
+            },
+            include: {
+              producto: {
+                select: {
+                  sku: true,
+                  nombre: true,
+                },
+              },
+              usuario: {
+                select: {
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          })
+
+          // Actualizar stock del producto
+          await prisma.producto.update({
+            where: { id: datosMovimiento.productoId },
+            data: { stockActual: stockNuevo },
+          })
+
+          return movimiento
+        })
+
+        request.log.info(
+          {
+            movimientoId: resultado.id,
             productoId: datosMovimiento.productoId,
             tipo: datosMovimiento.tipo,
             cantidad: datosMovimiento.cantidad,
-            fecha: new Date().toISOString(),
+            stockAnterior,
+            stockNuevo,
           },
-          stockAnterior: 100,
-          stockNuevo:
-            datosMovimiento.tipo === 'ENTRADA'
-              ? 100 + datosMovimiento.cantidad
-              : 100 - datosMovimiento.cantidad,
-        }
+          'Movimiento de inventario registrado'
+        )
 
-        return reply
-          .status(201)
-          .send(
-            successResponse(mockResultado, 'Movimiento registrado exitosamente')
-          )
-      } catch (error) {
+        return reply.status(201).send({
+          success: true,
+          data: {
+            movimiento: resultado,
+            stockAnterior,
+            stockNuevo,
+          },
+          message: 'Movimiento registrado exitosamente',
+        })
+      } catch (error: any) {
         request.log.error('Error registrando movimiento:', error)
 
-        // Manejar errores específicos
-        if (error instanceof Error) {
-          if (error.message.includes('Stock insuficiente')) {
-            return reply
-              .status(409)
-              .send(
-                errorResponse('Stock insuficiente', [
-                  { message: error.message },
-                ])
-              )
-          }
-
-          if (error.message.includes('no encontrado')) {
-            return reply
-              .status(404)
-              .send(errorResponse('Producto no encontrado'))
-          }
+        if (error.name === 'ZodError') {
+          return reply.status(400).send({
+            success: false,
+            error: 'Datos inválidos',
+            details: error.issues,
+          })
         }
 
-        return reply
-          .status(500)
-          .send(errorResponse('Error interno del servidor'))
+        return reply.status(500).send({
+          success: false,
+          error: 'Error interno del servidor',
+        })
       }
     }
   )
@@ -268,34 +337,92 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       try {
-        const filtros = validateZodSchema(
-          FiltrosMovimientoSchema,
-          request.query
-        )
+        const filtros = FiltrosMovimientoSchema.parse(request.query)
 
-        // TODO: Usar caso de uso para consultar movimientos
-        // const resultado = await consultarMovimientosUC.execute(filtros);
+        // Construir filtros de Prisma
+        const where: any = {}
 
-        // Mock response
-        const mockMovimientos = []
-        const mockTotal = 0
+        if (filtros.productoId) {
+          where.productoId = filtros.productoId
+        }
+
+        if (filtros.tipo) {
+          where.tipo = filtros.tipo
+        }
+
+        if (filtros.fechaDesde || filtros.fechaHasta) {
+          where.fecha = {}
+          if (filtros.fechaDesde) {
+            where.fecha.gte = new Date(filtros.fechaDesde)
+          }
+          if (filtros.fechaHasta) {
+            where.fecha.lte = new Date(filtros.fechaHasta)
+          }
+        }
+
+        // Calcular paginación
+        const page = filtros.page || 1
+        const limit = filtros.limit || 20
+        const skip = (page - 1) * limit
+
+        // Obtener movimientos y total
+        const [movimientos, total] = await Promise.all([
+          fastify.prisma.movimientoInventario.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy: { fecha: 'desc' },
+            include: {
+              producto: {
+                select: {
+                  id: true,
+                  sku: true,
+                  nombre: true,
+                  categoria: true,
+                  unidad: true,
+                },
+              },
+              usuario: {
+                select: {
+                  id: true,
+                  email: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          }),
+          fastify.prisma.movimientoInventario.count({ where }),
+        ])
+
+        const pages = Math.ceil(total / limit)
 
         return {
-          data: mockMovimientos,
+          data: movimientos,
           pagination: {
-            page: filtros.page,
-            limit: filtros.limit,
-            total: mockTotal,
-            pages: Math.ceil(mockTotal / filtros.limit),
-            hasNextPage: filtros.page < Math.ceil(mockTotal / filtros.limit),
-            hasPrevPage: filtros.page > 1,
+            page,
+            limit,
+            total,
+            pages,
+            hasNextPage: page < pages,
+            hasPrevPage: page > 1,
           },
         }
-      } catch (error) {
+      } catch (error: any) {
         request.log.error('Error consultando movimientos:', error)
-        return reply
-          .status(500)
-          .send(errorResponse('Error interno del servidor'))
+
+        if (error.name === 'ZodError') {
+          return reply.status(400).send({
+            success: false,
+            error: 'Parámetros inválidos',
+            details: error.issues,
+          })
+        }
+
+        return reply.status(500).send({
+          success: false,
+          error: 'Error interno del servidor',
+        })
       }
     }
   )
@@ -342,39 +469,83 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       try {
-        // TODO: Usar caso de uso para obtener estadísticas
-        // const resumen = await obtenerResumenInventarioUC.execute();
+        // Obtener estadísticas de productos
+        const [totalProductos, productosActivos, productosStockBajo] =
+          await Promise.all([
+            fastify.prisma.producto.count(),
+            fastify.prisma.producto.count({ where: { isActive: true } }),
+            fastify.prisma.producto.count({
+              where: {
+                isActive: true,
+                // No podemos usar stockActual <= stockMin directamente en Prisma
+                // Lo calcularemos después
+              },
+            }),
+          ])
 
-        // Mock response
-        const mockResumen = {
-          totalProductos: 25,
-          productosActivos: 23,
-          productosStockBajo: 3,
-          valorTotalInventario: 45000.5,
-          ultimosMovimientos: [
-            {
-              id: 'mov-1',
-              productoNombre: 'Producto A',
-              tipo: 'SALIDA',
-              cantidad: 10,
-              fecha: new Date().toISOString(),
+        // Obtener productos para calcular stock bajo y valor total
+        const productos = await fastify.prisma.producto.findMany({
+          where: { isActive: true },
+          select: {
+            stockActual: true,
+            stockMin: true,
+            costo: true,
+          },
+        })
+
+        // Calcular productos con stock bajo
+        const productosConStockBajo = productos.filter(
+          (p) => p.stockActual <= p.stockMin
+        ).length
+
+        // Calcular valor total del inventario
+        const valorTotalInventario = productos.reduce(
+          (total, p) => total + p.stockActual * p.costo,
+          0
+        )
+
+        // Obtener últimos movimientos
+        const ultimosMovimientos =
+          await fastify.prisma.movimientoInventario.findMany({
+            take: 10,
+            orderBy: { fecha: 'desc' },
+            include: {
+              producto: {
+                select: {
+                  nombre: true,
+                  sku: true,
+                },
+              },
             },
-            {
-              id: 'mov-2',
-              productoNombre: 'Producto B',
-              tipo: 'ENTRADA',
-              cantidad: 50,
-              fecha: new Date(Date.now() - 3600000).toISOString(),
-            },
-          ],
+          })
+
+        const resumen = {
+          totalProductos,
+          productosActivos,
+          productosStockBajo: productosConStockBajo,
+          valorTotalInventario: Math.round(valorTotalInventario * 100) / 100,
+          ultimosMovimientos: ultimosMovimientos.map((m) => ({
+            id: m.id,
+            productoNombre: m.producto.nombre,
+            productoSku: m.producto.sku,
+            tipo: m.tipo,
+            cantidad: m.cantidad,
+            fecha: m.fecha,
+            comentario: m.comentario,
+            referencia: m.referencia,
+          })),
         }
 
-        return successResponse(mockResumen)
-      } catch (error) {
+        return {
+          success: true,
+          data: resumen,
+        }
+      } catch (error: any) {
         request.log.error('Error obteniendo resumen:', error)
-        return reply
-          .status(500)
-          .send(errorResponse('Error interno del servidor'))
+        return reply.status(500).send({
+          success: false,
+          error: 'Error interno del servidor',
+        })
       }
     }
   )
@@ -431,45 +602,88 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       try {
-        // TODO: Usar caso de uso para obtener alertas
-        // const alertas = await obtenerAlertasStockUC.execute();
-
-        // Mock response
-        const mockAlertas = {
-          alertas: [
-            {
-              productoId: 'prod-1',
-              sku: 'SKU001',
-              nombre: 'Producto A',
-              stockActual: 2,
-              stockMinimo: 10,
-              prioridad: 'ALTA' as const,
-              diasSinStock: 3,
+        // Obtener productos activos con su stock
+        const productos = await fastify.prisma.producto.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            sku: true,
+            nombre: true,
+            stockActual: true,
+            stockMin: true,
+            leadTime: true,
+            politicaAbastecimiento: {
+              select: {
+                stockSeguridad: true,
+              },
             },
-            {
-              productoId: 'prod-2',
-              sku: 'SKU002',
-              nombre: 'Producto B',
-              stockActual: 8,
-              stockMinimo: 15,
-              prioridad: 'MEDIA' as const,
-              diasSinStock: 7,
-            },
-          ],
-          resumen: {
-            totalAlertas: 2,
-            alertasAlta: 1,
-            alertasMedia: 1,
-            alertasBaja: 0,
           },
+        })
+
+        // Filtrar productos con stock bajo y calcular prioridad
+        const alertas = productos
+          .filter((p) => p.stockActual <= p.stockMin)
+          .map((p) => {
+            const porcentajeStock = (p.stockActual / p.stockMin) * 100
+            const stockSeguridad = p.politicaAbastecimiento?.stockSeguridad || 0
+
+            // Calcular prioridad basada en el porcentaje de stock
+            let prioridad: 'ALTA' | 'MEDIA' | 'BAJA'
+            if (p.stockActual <= stockSeguridad) {
+              prioridad = 'ALTA'
+            } else if (porcentajeStock <= 50) {
+              prioridad = 'ALTA'
+            } else if (porcentajeStock <= 75) {
+              prioridad = 'MEDIA'
+            } else {
+              prioridad = 'BAJA'
+            }
+
+            // Estimar días sin stock (simplificado)
+            // En un sistema real, esto se calcularía con la demanda promedio
+            const diasSinStock = Math.max(
+              0,
+              Math.ceil((p.stockMin - p.stockActual) / 10)
+            )
+
+            return {
+              productoId: p.id,
+              sku: p.sku,
+              nombre: p.nombre,
+              stockActual: p.stockActual,
+              stockMinimo: p.stockMin,
+              prioridad,
+              diasSinStock,
+              leadTime: p.leadTime,
+            }
+          })
+          .sort((a, b) => {
+            // Ordenar por prioridad: ALTA > MEDIA > BAJA
+            const prioridadOrder = { ALTA: 3, MEDIA: 2, BAJA: 1 }
+            return prioridadOrder[b.prioridad] - prioridadOrder[a.prioridad]
+          })
+
+        // Calcular resumen
+        const resumen = {
+          totalAlertas: alertas.length,
+          alertasAlta: alertas.filter((a) => a.prioridad === 'ALTA').length,
+          alertasMedia: alertas.filter((a) => a.prioridad === 'MEDIA').length,
+          alertasBaja: alertas.filter((a) => a.prioridad === 'BAJA').length,
         }
 
-        return successResponse(mockAlertas)
-      } catch (error) {
+        return {
+          success: true,
+          data: {
+            alertas,
+            resumen,
+          },
+        }
+      } catch (error: any) {
         request.log.error('Error obteniendo alertas:', error)
-        return reply
-          .status(500)
-          .send(errorResponse('Error interno del servidor'))
+        return reply.status(500).send({
+          success: false,
+          error: 'Error interno del servidor',
+        })
       }
     }
   )

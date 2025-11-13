@@ -59,15 +59,15 @@
       <!-- Filtros -->
       <div class="bg-white rounded-lg shadow mb-6">
         <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2"
-                >Número</label
+                >ID</label
               >
               <input
-                v-model="filters.numero"
+                v-model="filters.id"
                 type="text"
-                placeholder="Buscar por número..."
+                placeholder="Buscar por ID..."
                 class="input-field"
               />
             </div>
@@ -78,22 +78,9 @@
               <select v-model="filters.estado" class="input-field">
                 <option value="">Todos</option>
                 <option value="PENDIENTE">Pendiente</option>
-                <option value="EN_REVISION">En Revisión</option>
+                <option value="EN_APROBACION">En Aprobación</option>
                 <option value="APROBADA">Aprobada</option>
                 <option value="RECHAZADA">Rechazada</option>
-                <option value="COMPLETADA">Completada</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2"
-                >Prioridad</label
-              >
-              <select v-model="filters.prioridad" class="input-field">
-                <option value="">Todas</option>
-                <option value="BAJA">Baja</option>
-                <option value="MEDIA">Media</option>
-                <option value="ALTA">Alta</option>
-                <option value="CRITICA">Crítica</option>
               </select>
             </div>
             <div>
@@ -265,12 +252,12 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="table-header">Número</th>
+                <th class="table-header">ID</th>
                 <th class="table-header">Fecha</th>
                 <th class="table-header">Solicitante</th>
-                <th class="table-header">Descripción</th>
-                <th class="table-header">Monto</th>
-                <th class="table-header">Prioridad</th>
+                <th class="table-header">Producto</th>
+                <th class="table-header">Cantidad</th>
+                <th class="table-header">Costo Total</th>
                 <th class="table-header">Estado</th>
                 <th class="table-header">Acciones</th>
               </tr>
@@ -284,17 +271,18 @@
                 <td class="table-cell font-medium text-blue-600">
                   <button
                     @click="viewSolicitud(solicitud)"
-                    class="hover:underline"
+                    class="hover:underline font-mono text-xs"
+                    :title="solicitud.id"
                   >
-                    {{ solicitud.numero }}
+                    #{{ solicitud.id.substring(0, 8).toUpperCase() }}
                   </button>
                 </td>
                 <td class="table-cell">
                   <div class="text-sm text-gray-900">
-                    {{ formatDate(solicitud.fecha) }}
+                    {{ formatDate(new Date(solicitud.createdAt)) }}
                   </div>
                   <div class="text-sm text-gray-500">
-                    {{ formatTime(solicitud.fecha) }}
+                    {{ formatTime(new Date(solicitud.createdAt)) }}
                   </div>
                 </td>
                 <td class="table-cell">
@@ -303,44 +291,57 @@
                       class="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center mr-3"
                     >
                       <span class="text-xs font-medium text-gray-700">
-                        {{ getInitials(solicitud.solicitante) }}
+                        {{
+                          getInitials(
+                            solicitud.creadoPor?.firstName +
+                              " " +
+                              solicitud.creadoPor?.lastName
+                          )
+                        }}
                       </span>
                     </div>
                     <div>
                       <div class="font-medium text-gray-900">
-                        {{ solicitud.solicitante }}
+                        {{ solicitud.creadoPor?.firstName }}
+                        {{ solicitud.creadoPor?.lastName }}
                       </div>
                       <div class="text-sm text-gray-500">
-                        {{ solicitud.departamento }}
+                        {{ solicitud.creadoPor?.email }}
                       </div>
                     </div>
                   </div>
                 </td>
                 <td class="table-cell">
                   <div class="max-w-xs">
-                    <div class="font-medium text-gray-900 truncate">
-                      {{ solicitud.descripcion }}
+                    <div class="font-medium text-gray-900">
+                      {{ solicitud.producto?.nombre || "N/A" }}
                     </div>
                     <div class="text-sm text-gray-500">
-                      {{ solicitud.itemsCount }} items
+                      SKU: {{ solicitud.producto?.sku || "N/A" }}
                     </div>
                   </div>
                 </td>
                 <td class="table-cell font-medium">
-                  ${{ formatPrice(solicitud.montoTotal) }}
+                  {{ solicitud.cantidad }}
+                  {{ solicitud.producto?.unidad || "" }}
                 </td>
-                <td class="table-cell">
-                  <span
-                    class="badge"
-                    :class="getPrioridadClass(solicitud.prioridad)"
-                  >
-                    {{ solicitud.prioridad }}
-                  </span>
+                <td class="table-cell font-medium">
+                  ${{
+                    formatPrice(
+                      (solicitud.producto?.costo || 0) * solicitud.cantidad
+                    )
+                  }}
                 </td>
                 <td class="table-cell">
                   <span class="badge" :class="getEstadoClass(solicitud.estado)">
                     {{ getEstadoLabel(solicitud.estado) }}
                   </span>
+                  <div
+                    v-if="solicitud.urgente"
+                    class="text-xs text-red-600 font-medium mt-1"
+                  >
+                    ⚠️ Urgente
+                  </div>
                 </td>
                 <td class="table-cell">
                   <div class="flex items-center space-x-2">
@@ -449,6 +450,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de Solicitud -->
+    <ModalSolicitud v-model="showCreateModal" @success="onSolicitudCreada" />
   </AppLayout>
 </template>
 
@@ -456,71 +460,24 @@
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import AppLayout from "../components/AppLayout.vue";
+import ModalSolicitud from "../components/ModalSolicitud.vue";
+import axios from "axios";
 
 const authStore = useAuthStore();
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 // Estado reactivo
 const loading = ref(false);
 const showCreateModal = ref(false);
 const activeTab = ref("todas");
 
-// Datos de ejemplo
-const solicitudes = ref([
-  {
-    id: 1,
-    numero: "SC-2024-001",
-    fecha: new Date("2024-01-15T10:00:00"),
-    solicitante: "Juan Pérez",
-    departamento: "Producción",
-    descripcion: "Materias primas para producción mensual",
-    itemsCount: 5,
-    montoTotal: 2500000,
-    prioridad: "ALTA",
-    estado: "PENDIENTE",
-  },
-  {
-    id: 2,
-    numero: "SC-2024-002",
-    fecha: new Date("2024-01-14T14:30:00"),
-    solicitante: "María García",
-    departamento: "Calidad",
-    descripcion: "Equipos de laboratorio",
-    itemsCount: 3,
-    montoTotal: 1200000,
-    prioridad: "MEDIA",
-    estado: "EN_REVISION",
-  },
-  {
-    id: 3,
-    numero: "SC-2024-003",
-    fecha: new Date("2024-01-13T09:15:00"),
-    solicitante: "Carlos López",
-    departamento: "Logística",
-    descripcion: "Material de empaque",
-    itemsCount: 8,
-    montoTotal: 800000,
-    prioridad: "BAJA",
-    estado: "APROBADA",
-  },
-  {
-    id: 4,
-    numero: "SC-2024-004",
-    fecha: new Date("2024-01-12T16:45:00"),
-    solicitante: "Ana Rodríguez",
-    departamento: "Mantenimiento",
-    descripcion: "Repuestos urgentes para línea 2",
-    itemsCount: 2,
-    montoTotal: 3500000,
-    prioridad: "CRITICA",
-    estado: "COMPLETADA",
-  },
-]);
+// Datos de solicitudes desde API
+const solicitudes = ref<any[]>([]);
 
 // Filtros
 const filters = ref({
-  numero: "",
+  id: "",
   estado: "",
-  prioridad: "",
   solicitante: "",
 });
 
@@ -534,34 +491,26 @@ const filteredSolicitudes = computed(() => {
       ["PENDIENTE", "EN_REVISION"].includes(s.estado)
     );
   } else if (activeTab.value === "mis-solicitudes") {
-    // TODO: Filtrar por usuario actual
-    filtered = filtered.filter((s) => s.solicitante === "Juan Pérez");
+    // Filtrar por usuario actual
+    const userId = authStore.user?.id;
+    filtered = filtered.filter((s) => s.creadoPorId === userId);
   }
 
   // Aplicar filtros adicionales
   return filtered.filter((solicitud) => {
-    const matchesNumero =
-      !filters.value.numero ||
-      solicitud.numero
-        .toLowerCase()
-        .includes(filters.value.numero.toLowerCase());
+    const matchesId =
+      !filters.value.id || solicitud.id.toString().includes(filters.value.id);
 
     const matchesEstado =
       !filters.value.estado || solicitud.estado === filters.value.estado;
 
-    const matchesPrioridad =
-      !filters.value.prioridad ||
-      solicitud.prioridad === filters.value.prioridad;
-
     const matchesSolicitante =
       !filters.value.solicitante ||
-      solicitud.solicitante
+      (solicitud.creadoPor?.firstName + " " + solicitud.creadoPor?.lastName)
         .toLowerCase()
         .includes(filters.value.solicitante.toLowerCase());
 
-    return (
-      matchesNumero && matchesEstado && matchesPrioridad && matchesSolicitante
-    );
+    return matchesId && matchesEstado && matchesSolicitante;
   });
 });
 
@@ -570,18 +519,20 @@ const stats = computed(() => ({
   total: solicitudes.value.length,
   pendientes: solicitudes.value.filter((s) => s.estado === "PENDIENTE").length,
   aprobadas: solicitudes.value.filter((s) => s.estado === "APROBADA").length,
-  pendientesAprobacion: solicitudes.value.filter((s) =>
-    ["PENDIENTE", "EN_REVISION"].includes(s.estado)
+  pendientesAprobacion: solicitudes.value.filter(
+    (s) => s.estado === "EN_APROBACION"
   ).length,
-  montoTotal: solicitudes.value.reduce((sum, s) => sum + s.montoTotal, 0),
+  montoTotal: solicitudes.value.reduce(
+    (sum, s) => sum + (s.producto?.costo || 0) * (s.cantidad || 0),
+    0
+  ),
 }));
 
 // Métodos
 const resetFilters = () => {
   filters.value = {
-    numero: "",
+    id: "",
     estado: "",
-    prioridad: "",
     solicitante: "",
   };
 };
@@ -593,23 +544,12 @@ const getTabTitle = () => {
   return "";
 };
 
-const getPrioridadClass = (prioridad: string) => {
-  const classes = {
-    BAJA: "badge-secondary",
-    MEDIA: "badge-info",
-    ALTA: "badge-warning",
-    CRITICA: "badge-error",
-  };
-  return classes[prioridad as keyof typeof classes] || "badge-secondary";
-};
-
 const getEstadoClass = (estado: string) => {
   const classes = {
     PENDIENTE: "badge-warning",
-    EN_REVISION: "badge-info",
+    EN_APROBACION: "badge-warning",
     APROBADA: "badge-success",
     RECHAZADA: "badge-error",
-    COMPLETADA: "badge-secondary",
   };
   return classes[estado as keyof typeof classes] || "badge-secondary";
 };
@@ -617,10 +557,9 @@ const getEstadoClass = (estado: string) => {
 const getEstadoLabel = (estado: string) => {
   const labels = {
     PENDIENTE: "Pendiente",
-    EN_REVISION: "En Revisión",
+    EN_APROBACION: "En Aprobación",
     APROBADA: "Aprobada",
     RECHAZADA: "Rechazada",
-    COMPLETADA: "Completada",
   };
   return labels[estado as keyof typeof labels] || estado;
 };
@@ -655,34 +594,105 @@ const formatTime = (date: Date) => {
 const canApprove = (solicitud: any) => {
   return (
     authStore.hasAnyRole(["ADMIN", "APROBADOR"]) &&
-    ["PENDIENTE", "EN_REVISION"].includes(solicitud.estado)
+    (solicitud.estado === "EN_APROBACION" || solicitud.estado === "PENDIENTE")
   );
 };
 
 const canReject = (solicitud: any) => {
   return (
     authStore.hasAnyRole(["ADMIN", "APROBADOR"]) &&
-    ["PENDIENTE", "EN_REVISION"].includes(solicitud.estado)
+    (solicitud.estado === "EN_APROBACION" || solicitud.estado === "PENDIENTE")
   );
+};
+
+const cargarSolicitudes = async () => {
+  loading.value = true;
+  try {
+    const token = authStore.token;
+    const response = await axios.get(`${API_URL}/solicitudes`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    solicitudes.value = response.data;
+  } catch (error: any) {
+    console.error("Error al cargar solicitudes:", error);
+    alert(
+      "Error al cargar las solicitudes: " +
+        (error.response?.data?.message || error.message)
+    );
+  } finally {
+    loading.value = false;
+  }
+};
+
+const onSolicitudCreada = async () => {
+  await cargarSolicitudes();
 };
 
 const viewSolicitud = (solicitud: any) => {
   console.log("Ver solicitud:", solicitud);
-  // TODO: Implementar modal de detalles
+  // TODO: Implementar modal de detalles con todos los campos
+  alert(
+    `Solicitud: ${solicitud.id}\nProducto: ${solicitud.producto?.nombre || "N/A"}\nCantidad: ${solicitud.cantidad}\nEstado: ${solicitud.estado}`
+  );
 };
 
-const approveSolicitud = (solicitud: any) => {
-  console.log("Aprobar solicitud:", solicitud);
-  // TODO: Implementar aprobación
+const approveSolicitud = async (solicitud: any) => {
+  if (
+    !confirm(
+      `¿Está seguro de aprobar la solicitud de ${solicitud.cantidad} unidades de ${solicitud.producto?.nombre}?`
+    )
+  ) {
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const token = authStore.token;
+    await axios.patch(
+      `${API_URL}/solicitudes/${solicitud.id}/aprobar`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    alert("Solicitud aprobada exitosamente");
+    await cargarSolicitudes();
+  } catch (error: any) {
+    console.error("Error al aprobar solicitud:", error);
+    alert(
+      "Error al aprobar la solicitud: " +
+        (error.response?.data?.message || error.message)
+    );
+  } finally {
+    loading.value = false;
+  }
 };
 
-const rejectSolicitud = (solicitud: any) => {
-  console.log("Rechazar solicitud:", solicitud);
-  // TODO: Implementar rechazo
+const rejectSolicitud = async (solicitud: any) => {
+  const motivo = prompt("Ingrese el motivo del rechazo:");
+  if (!motivo) return;
+
+  loading.value = true;
+  try {
+    const token = authStore.token;
+    await axios.patch(
+      `${API_URL}/solicitudes/${solicitud.id}/rechazar`,
+      { comentario: motivo },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    alert("Solicitud rechazada");
+    await cargarSolicitudes();
+  } catch (error: any) {
+    console.error("Error al rechazar solicitud:", error);
+    alert(
+      "Error al rechazar la solicitud: " +
+        (error.response?.data?.message || error.message)
+    );
+  } finally {
+    loading.value = false;
+  }
 };
 
-onMounted(() => {
-  // TODO: Cargar datos desde API
+onMounted(async () => {
+  await cargarSolicitudes();
 });
 </script>
 

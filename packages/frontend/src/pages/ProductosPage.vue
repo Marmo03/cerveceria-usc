@@ -1,6 +1,13 @@
 <template>
   <AppLayout>
-    <div class="max-w-7xl mx-auto">
+    <div v-if="loading" class="max-w-7xl mx-auto py-12 text-center">
+      <div
+        class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"
+      ></div>
+      <p class="mt-4 text-gray-600">Cargando productos...</p>
+    </div>
+
+    <div v-else class="max-w-7xl mx-auto">
       <!-- Header -->
       <div class="mb-8">
         <div class="flex items-center justify-between">
@@ -33,8 +40,8 @@
               Volver al Dashboard
             </button>
             <button
-              v-if="authStore.hasAnyRole(['ADMIN'])"
-              @click="showCreateModal = true"
+              v-if="authStore.hasAnyRole(['ADMIN', 'OPERARIO'])"
+              @click="abrirModalCrear"
               class="btn btn-primary"
             >
               <svg
@@ -207,12 +214,12 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="table-header">Código</th>
+                <th class="table-header">SKU</th>
                 <th class="table-header">Nombre</th>
                 <th class="table-header">Categoría</th>
                 <th class="table-header">Stock Actual</th>
                 <th class="table-header">Stock Mínimo</th>
-                <th class="table-header">Precio</th>
+                <th class="table-header">Costo</th>
                 <th class="table-header">Estado</th>
                 <th class="table-header">Acciones</th>
               </tr>
@@ -224,15 +231,12 @@
                 class="hover:bg-gray-50"
               >
                 <td class="table-cell font-medium text-gray-900">
-                  {{ producto.codigo }}
+                  {{ producto.sku }}
                 </td>
                 <td class="table-cell">
                   <div>
                     <div class="font-medium text-gray-900">
                       {{ producto.nombre }}
-                    </div>
-                    <div class="text-sm text-gray-500">
-                      {{ producto.descripcion }}
                     </div>
                   </div>
                 </td>
@@ -247,22 +251,22 @@
                 <td class="table-cell">
                   <span
                     :class="
-                      getStockClass(producto.stockActual, producto.stockMinimo)
+                      getStockClass(producto.stockActual, producto.stockMin)
                     "
                   >
-                    {{ producto.stockActual }} {{ producto.unidadMedida }}
+                    {{ producto.stockActual }} {{ producto.unidad }}
                   </span>
                 </td>
                 <td class="table-cell">
-                  {{ producto.stockMinimo }} {{ producto.unidadMedida }}
+                  {{ producto.stockMin }} {{ producto.unidad }}
                 </td>
-                <td class="table-cell">${{ formatPrice(producto.precio) }}</td>
+                <td class="table-cell">${{ formatPrice(producto.costo) }}</td>
                 <td class="table-cell">
                   <span
                     class="badge"
-                    :class="producto.activo ? 'badge-success' : 'badge-error'"
+                    :class="producto.isActive ? 'badge-success' : 'badge-error'"
                   >
-                    {{ producto.activo ? "Activo" : "Inactivo" }}
+                    {{ producto.isActive ? "Activo" : "Inactivo" }}
                   </span>
                 </td>
                 <td class="table-cell">
@@ -319,17 +323,8 @@
           </table>
         </div>
 
-        <!-- Loading state -->
-        <div v-if="loading" class="flex justify-center items-center py-12">
-          <div class="spinner"></div>
-          <span class="ml-2 text-gray-600">Cargando productos...</span>
-        </div>
-
         <!-- Empty state -->
-        <div
-          v-if="!loading && filteredProductos.length === 0"
-          class="text-center py-12"
-        >
+        <div v-if="filteredProductos.length === 0" class="text-center py-12">
           <svg
             class="mx-auto h-12 w-12 text-gray-400"
             fill="none"
@@ -352,69 +347,31 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de Producto -->
+    <ModalProducto
+      v-model="showModal"
+      :producto="productoSeleccionado"
+      :proveedores="[]"
+      @success="onProductoGuardado"
+    />
   </AppLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
+import { useProductsStore } from "../stores/products";
 import AppLayout from "../components/AppLayout.vue";
+import ModalProducto from "../components/ModalProducto.vue";
 
 const authStore = useAuthStore();
+const productsStore = useProductsStore();
 
 // Estado reactivo
-const loading = ref(false);
-const showCreateModal = ref(false);
-const productos = ref([
-  {
-    id: 1,
-    codigo: "MP001",
-    nombre: "Malta Pilsner",
-    descripcion: "Malta base para cervezas ligeras",
-    categoria: "MATERIA_PRIMA",
-    stockActual: 500,
-    stockMinimo: 100,
-    precio: 2500,
-    unidadMedida: "kg",
-    activo: true,
-  },
-  {
-    id: 2,
-    codigo: "MP002",
-    nombre: "Lúpulo Cascade",
-    descripcion: "Lúpulo aromático americano",
-    categoria: "MATERIA_PRIMA",
-    stockActual: 25,
-    stockMinimo: 50,
-    precio: 15000,
-    unidadMedida: "kg",
-    activo: true,
-  },
-  {
-    id: 3,
-    codigo: "PT001",
-    nombre: "Cerveza IPA",
-    descripcion: "India Pale Ale artesanal",
-    categoria: "PRODUCTO_TERMINADO",
-    stockActual: 200,
-    stockMinimo: 50,
-    precio: 8500,
-    unidadMedida: "unidades",
-    activo: true,
-  },
-  {
-    id: 4,
-    codigo: "EMP001",
-    nombre: "Botella 355ml",
-    descripción: "Botella ámbar para cerveza",
-    categoria: "EMPAQUE",
-    stockActual: 1000,
-    stockMinimo: 500,
-    precio: 450,
-    unidadMedida: "unidades",
-    activo: true,
-  },
-]);
+const showModal = ref(false);
+const productoSeleccionado = ref(null);
+const loading = ref(true); // Estado de carga local
 
 // Filtros
 const filters = ref({
@@ -423,17 +380,29 @@ const filters = ref({
   activo: "",
 });
 
+// Productos desde el store
+const productos = computed(() => {
+  const prods = productsStore.productos;
+  return Array.isArray(prods) ? prods : [];
+});
+
 // Productos filtrados
 const filteredProductos = computed(() => {
-  return productos.value.filter((producto) => {
+  if (!Array.isArray(productos.value)) return [];
+
+  return productos.value.filter((producto: any) => {
+    if (!producto) return false;
+
     const matchesSearch =
       !filters.value.search ||
-      producto.nombre
-        .toLowerCase()
-        .includes(filters.value.search.toLowerCase()) ||
-      producto.codigo
-        .toLowerCase()
-        .includes(filters.value.search.toLowerCase());
+      (producto.nombre &&
+        producto.nombre
+          .toLowerCase()
+          .includes(filters.value.search.toLowerCase())) ||
+      (producto.sku &&
+        producto.sku
+          .toLowerCase()
+          .includes(filters.value.search.toLowerCase()));
 
     const matchesCategoria =
       !filters.value.categoria ||
@@ -441,20 +410,27 @@ const filteredProductos = computed(() => {
 
     const matchesActivo =
       !filters.value.activo ||
-      producto.activo.toString() === filters.value.activo;
+      (producto.isActive !== undefined &&
+        producto.isActive.toString() === filters.value.activo);
 
     return matchesSearch && matchesCategoria && matchesActivo;
   });
 });
 
 // Estadísticas
-const stats = computed(() => ({
-  total: productos.value.length,
-  activos: productos.value.filter((p) => p.activo).length,
-  stockBajo: productos.value.filter((p) => p.stockActual <= p.stockMinimo)
-    .length,
-  categorias: new Set(productos.value.map((p) => p.categoria)).size,
-}));
+const stats = computed(() => {
+  if (!Array.isArray(productos.value)) {
+    return { total: 0, activos: 0, stockBajo: 0, categorias: 0 };
+  }
+
+  return {
+    total: productos.value.length,
+    activos: productos.value.filter((p: any) => p.isActive).length,
+    stockBajo: productos.value.filter((p: any) => p.stockActual <= p.stockMin)
+      .length,
+    categorias: new Set(productos.value.map((p: any) => p.categoria)).size,
+  };
+});
 
 // Métodos
 const resetFilters = () => {
@@ -495,17 +471,85 @@ const formatPrice = (price: number) => {
   return new Intl.NumberFormat("es-CO").format(price);
 };
 
-const viewProduct = (producto: any) => {
-  console.log("Ver producto:", producto);
+const viewProduct = async (producto: any) => {
+  await productsStore.fetchProductoById(producto.id);
+  console.log("Ver producto:", productsStore.productoActual);
   // TODO: Implementar modal de detalles
 };
 
 const editProduct = (producto: any) => {
-  console.log("Editar producto:", producto);
-  // TODO: Implementar modal de edición
+  productoSeleccionado.value = producto;
+  showModal.value = true;
 };
 
-onMounted(() => {
-  // TODO: Cargar productos desde API
+const abrirModalCrear = () => {
+  productoSeleccionado.value = null;
+  showModal.value = true;
+};
+
+const onProductoGuardado = async () => {
+  // Recargar productos después de guardar
+  await productsStore.fetchProductos();
+};
+
+const deleteProduct = async (producto: any) => {
+  if (confirm(`¿Estás seguro de eliminar "${producto.nombre}"?`)) {
+    try {
+      await productsStore.deleteProducto(producto.id);
+      await productsStore.fetchProductos();
+    } catch (error) {
+      console.error("Error al eliminar:", error);
+      alert("Error al eliminar el producto");
+    }
+  }
+};
+
+const previousPage = async () => {
+  const currentPage = productsStore.pagination?.page || 1;
+  if (currentPage > 1) {
+    await productsStore.changePage(currentPage - 1);
+  }
+};
+
+const nextPage = async () => {
+  const currentPage = productsStore.pagination?.page || 1;
+  const totalPages = productsStore.pagination?.pages || 1;
+  if (currentPage < totalPages) {
+    await productsStore.changePage(currentPage + 1);
+  }
+};
+
+onMounted(async () => {
+  console.log("=== ProductosPage montado ===");
+  console.log("Auth store token:", authStore.token ? "presente" : "ausente");
+  console.log("Auth store user:", authStore.user);
+  console.log("Productos store inicial:", productsStore.productos);
+
+  loading.value = true;
+
+  try {
+    console.log("Iniciando fetch de productos...");
+    await productsStore.fetchProductos();
+    console.log(
+      "Productos cargados exitosamente:",
+      productsStore.productos?.length || 0
+    );
+    if (productsStore.productos && productsStore.productos.length > 0) {
+      console.log("Primeros 2 productos:", productsStore.productos.slice(0, 2));
+    } else {
+      console.warn("No se cargaron productos");
+    }
+  } catch (error: any) {
+    console.error("❌ Error al cargar productos:", error);
+    console.error("Error message:", error.message);
+    console.error("Error response:", error.response?.data);
+    console.error("Error status:", error.response?.status);
+    alert(
+      "Error al cargar productos: " + (error.message || "Error desconocido")
+    );
+  } finally {
+    loading.value = false;
+    console.log("=== Carga finalizada, loading:", loading.value, "===");
+  }
 });
 </script>
