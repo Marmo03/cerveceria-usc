@@ -57,7 +57,7 @@
       </div>
 
       <!-- Filtros -->
-      <div class="bg-white rounded-lg shadow mb-6">
+      <div class="bg-white rounded-lg shadow mb-6 border-4 border-blue-400">
         <div class="p-6">
           <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
@@ -114,7 +114,7 @@
 
       <!-- Resumen de Stock -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div class="stat-card">
+        <div class="stat-card border-4 border-blue-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-blue-100 text-blue-600">
             <svg
               class="h-8 w-8"
@@ -138,7 +138,7 @@
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card border-4 border-green-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-green-100 text-green-600">
             <svg
               class="h-8 w-8"
@@ -160,7 +160,7 @@
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card border-4 border-red-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-red-100 text-red-600">
             <svg
               class="h-8 w-8"
@@ -182,7 +182,7 @@
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card border-4 border-yellow-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-yellow-100 text-yellow-600">
             <svg
               class="h-8 w-8"
@@ -230,29 +230,29 @@
       </div>
 
       <!-- Contenido de tabs -->
-      <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div class="bg-white rounded-lg shadow overflow-hidden border-4 border-gray-400">
         <!-- Tab Movimientos -->
         <div v-if="activeTab === 'movimientos'">
-          <div class="px-6 py-4 border-b border-gray-200">
+          <div class="px-6 py-4 border-b-2 border-gray-400 bg-gray-50">
             <h3 class="text-lg font-medium text-gray-900">
               Movimientos de Inventario
             </h3>
           </div>
 
           <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full divide-y divide-gray-400">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="table-header">Fecha</th>
-                  <th class="table-header">Producto</th>
-                  <th class="table-header">Tipo</th>
-                  <th class="table-header">Cantidad</th>
-                  <th class="table-header">Motivo</th>
-                  <th class="table-header">Usuario</th>
-                  <th class="table-header">Estado</th>
+                  <th class="table-header border-b-2 border-gray-400">Fecha</th>
+                  <th class="table-header border-b-2 border-gray-400">Producto</th>
+                  <th class="table-header border-b-2 border-gray-400">Tipo</th>
+                  <th class="table-header border-b-2 border-gray-400">Cantidad</th>
+                  <th class="table-header border-b-2 border-gray-400">Motivo</th>
+                  <th class="table-header border-b-2 border-gray-400">Usuario</th>
+                  <th class="table-header border-b-2 border-gray-400">Estado</th>
                 </tr>
               </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
+              <tbody class="bg-white divide-y divide-gray-300">
                 <tr
                   v-for="movimiento in filteredMovimientos"
                   :key="movimiento.id"
@@ -300,26 +300,26 @@
 
         <!-- Tab Stock -->
         <div v-if="activeTab === 'stock'">
-          <div class="px-6 py-4 border-b border-gray-200">
+          <div class="px-6 py-4 border-b-2 border-gray-400 bg-gray-50">
             <h3 class="text-lg font-medium text-gray-900">
               Estado Actual de Stock
             </h3>
           </div>
 
           <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full divide-y divide-gray-400">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="table-header">Producto</th>
-                  <th class="table-header">Categoría</th>
-                  <th class="table-header">Stock Actual</th>
-                  <th class="table-header">Stock Mínimo</th>
-                  <th class="table-header">Estado</th>
-                  <th class="table-header">Último Movimiento</th>
-                  <th class="table-header">Acciones</th>
+                  <th class="table-header border-b-2 border-gray-400">Producto</th>
+                  <th class="table-header border-b-2 border-gray-400">Categoría</th>
+                  <th class="table-header border-b-2 border-gray-400">Stock Actual</th>
+                  <th class="table-header border-b-2 border-gray-400">Stock Mínimo</th>
+                  <th class="table-header border-b-2 border-gray-400">Estado</th>
+                  <th class="table-header border-b-2 border-gray-400">Último Movimiento</th>
+                  <th class="table-header border-b-2 border-gray-400">Acciones</th>
                 </tr>
               </thead>
-              <tbody class="bg-white divide-y divide-gray-200">
+              <tbody class="bg-white divide-y divide-gray-300">
                 <tr
                   v-for="item in productsStore.productos"
                   :key="item.id"
@@ -594,7 +594,6 @@ onMounted(async () => {
   await loadInventoryData();
 });
 </script>
-
 <style scoped>
 .tab {
   @apply px-1 py-4 text-sm font-medium border-b-2 transition-colors duration-200;
