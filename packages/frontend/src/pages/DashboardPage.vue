@@ -2,7 +2,7 @@
   <AppLayout>
     <div class="space-y-6">
       <!-- Header del Dashboard -->
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between pb-2 border-b-4 border-gray-300">
         <div>
           <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p class="text-gray-600">Bienvenido, {{ authStore.fullName }}</p>
@@ -17,10 +17,10 @@
         <div
           v-for="alert in alerts"
           :key="alert.id"
-          :class="['alert-warning', 'flex items-center justify-between']"
+          :class="['alert-warning', 'flex items-center justify-between', 'border-2', 'border-yellow-400', 'rounded-lg', 'bg-yellow-50', 'p-3']"
         >
           <div class="flex items-center">
-            <svg class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <svg class="h-5 w-5 mr-2 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
               <path
                 fill-rule="evenodd"
                 d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
@@ -31,7 +31,7 @@
           </div>
           <button
             @click="dismissAlert(alert.id)"
-            class="text-yellow-600 hover:text-yellow-800"
+            class="text-yellow-600 hover:text-yellow-800 ml-2"
           >
             <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
               <path
@@ -44,9 +44,11 @@
         </div>
       </div>
 
+      <hr class="my-4 border-t-4 border-gray-300" />
+
       <!-- Tarjetas de resumen -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="card">
+        <div class="card border-4 border-blue-400 rounded-lg bg-white shadow-lg">
           <div class="flex items-center">
             <div class="p-3 rounded-full bg-blue-100 text-blue-600">
               <svg
@@ -72,7 +74,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card border-4 border-red-400 rounded-lg bg-white shadow-lg">
           <div class="flex items-center">
             <div class="p-3 rounded-full bg-red-100 text-red-600">
               <svg
@@ -98,7 +100,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card border-4 border-yellow-400 rounded-lg bg-white shadow-lg">
           <div class="flex items-center">
             <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
               <svg
@@ -126,7 +128,7 @@
           </div>
         </div>
 
-        <div class="card">
+        <div class="card border-4 border-green-400 rounded-lg bg-white shadow-lg">
           <div class="flex items-center">
             <div class="p-3 rounded-full bg-green-100 text-green-600">
               <svg
@@ -153,10 +155,12 @@
         </div>
       </div>
 
+      <hr class="my-6 border-t-4 border-gray-300" />
+
       <!-- Gráficos y tablas -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Últimos movimientos -->
-        <div class="card">
+        <div class="card border-4 border-gray-400 rounded-lg bg-gray-50 shadow-lg">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
             Últimos Movimientos
           </h3>
@@ -164,7 +168,7 @@
             <div
               v-for="movimiento in ultimosMovimientos"
               :key="movimiento.id"
-              class="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+              class="flex items-center justify-between p-3 bg-gray-100 rounded-lg border border-gray-300"
             >
               <div class="flex items-center">
                 <div
@@ -235,7 +239,7 @@
         </div>
 
         <!-- Productos con stock bajo -->
-        <div class="card">
+        <div class="card border-4 border-red-400 rounded-lg bg-red-50 shadow-lg">
           <h3 class="text-lg font-semibold text-gray-900 mb-4">
             Productos con Stock Bajo
           </h3>
@@ -243,7 +247,7 @@
             <div
               v-for="producto in productosStockBajo"
               :key="producto.id"
-              class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200"
+              class="flex items-center justify-between p-3 bg-white rounded-lg border-2 border-red-200"
             >
               <div>
                 <p class="text-sm font-medium text-gray-900">
@@ -272,8 +276,10 @@
         </div>
       </div>
 
+      <hr class="my-6 border-t-4 border-gray-300" />
+
       <!-- Acciones rápidas -->
-      <div class="card">
+      <div class="card border-4 border-green-400 rounded-lg bg-white shadow-lg">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">
           Acciones Rápidas
         </h3>
@@ -281,7 +287,7 @@
           <router-link
             v-if="authStore.hasAnyRole(['ADMIN', 'OPERARIO'])"
             to="/inventario"
-            class="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+            class="flex flex-col items-center p-4 border-2 border-dashed border-gray-400 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
           >
             <svg
               class="h-8 w-8 text-gray-400 mb-2"
@@ -304,7 +310,7 @@
           <router-link
             v-if="authStore.hasAnyRole(['ADMIN', 'OPERARIO'])"
             to="/productos"
-            class="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+            class="flex flex-col items-center p-4 border-2 border-dashed border-gray-400 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
           >
             <svg
               class="h-8 w-8 text-gray-400 mb-2"
@@ -327,7 +333,7 @@
           <router-link
             v-if="authStore.hasAnyRole(['ADMIN', 'OPERARIO', 'APROBADOR'])"
             to="/solicitudes"
-            class="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+            class="flex flex-col items-center p-4 border-2 border-dashed border-gray-400 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
           >
             <svg
               class="h-8 w-8 text-gray-400 mb-2"
@@ -350,7 +356,7 @@
           <router-link
             v-if="authStore.hasAnyRole(['ADMIN', 'ANALISTA'])"
             to="/kpis"
-            class="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+            class="flex flex-col items-center p-4 border-2 border-dashed border-gray-400 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
           >
             <svg
               class="h-8 w-8 text-gray-400 mb-2"
@@ -371,7 +377,7 @@
           <router-link
             v-if="authStore.hasRole('ADMIN')"
             to="/usuarios"
-            class="flex flex-col items-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
+            class="flex flex-col items-center p-4 border-2 border-dashed border-gray-400 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
           >
             <svg
               class="h-8 w-8 text-gray-400 mb-2"
