@@ -2,7 +2,7 @@
   <AppLayout>
     <div class="space-y-6">
       <!-- Header -->
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between border-b-4 border-gray-300">
         <div>
           <h1 class="text-2xl font-bold text-gray-900">Logística y Envíos</h1>
           <p class="text-gray-600">
@@ -52,12 +52,12 @@
       </div>
 
       <!-- Tabs -->
-      <div class="border-b border-gray-200">
+      <div class="border-b-4 border-blue-400">
         <nav class="-mb-px flex space-x-8">
           <button
             @click="activeTab = 'envios'"
             :class="[
-              'py-4 px-1 border-b-2 font-medium text-sm',
+              'py-4 px-1 border-b-4 font-medium text-sm',
               activeTab === 'envios'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
@@ -68,7 +68,7 @@
           <button
             @click="activeTab = 'tracking'"
             :class="[
-              'py-4 px-1 border-b-2 font-medium text-sm',
+              'py-4 px-1 border-b-4 font-medium text-sm',
               activeTab === 'tracking'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
@@ -79,7 +79,7 @@
           <button
             @click="activeTab = 'transportistas'"
             :class="[
-              'py-4 px-1 border-b-2 font-medium text-sm',
+              'py-4 px-1 border-b-4 font-medium text-sm',
               activeTab === 'transportistas'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
@@ -90,7 +90,7 @@
           <button
             @click="activeTab = 'estadisticas'"
             :class="[
-              'py-4 px-1 border-b-2 font-medium text-sm',
+              'py-4 px-1 border-b-4 font-medium text-sm',
               activeTab === 'estadisticas'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',

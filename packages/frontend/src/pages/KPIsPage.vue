@@ -1,8 +1,8 @@
 <template>
   <AppLayout>
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-7xl mx-auto space-y-6">
       <!-- Header -->
-      <div class="mb-8">
+      <div class="mb-8 border-b-4 border-gray-300">
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-3xl font-bold text-gray-900">KPIs y Reportes</h1>
@@ -51,7 +51,7 @@
       </div>
 
       <!-- Filtros de período -->
-      <div class="bg-white rounded-lg shadow mb-6">
+      <div class="bg-white rounded-lg shadow mb-6 border-4 border-blue-400">
         <div class="p-6">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
@@ -120,7 +120,7 @@
 
       <!-- KPIs principales -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="stat-card">
+        <div class="stat-card border-4 border-blue-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-blue-100 text-blue-600">
             <svg
               class="h-8 w-8"
@@ -162,7 +162,7 @@
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card border-4 border-green-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-green-100 text-green-600">
             <svg
               class="h-8 w-8"
@@ -204,7 +204,7 @@
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card border-4 border-yellow-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-yellow-100 text-yellow-600">
             <svg
               class="h-8 w-8"
@@ -248,7 +248,7 @@
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card border-4 border-purple-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-purple-100 text-purple-600">
             <svg
               class="h-8 w-8"
@@ -359,26 +359,26 @@
       </div>
 
       <!-- Tabla de productos más rotados -->
-      <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
-        <div class="px-6 py-4 border-b border-gray-200">
+      <div class="bg-white rounded-lg shadow overflow-hidden mb-6 border-4 border-gray-400">
+        <div class="px-6 py-4 border-b-2 border-gray-400 bg-gray-50">
           <h3 class="text-lg font-medium text-gray-900">
             Productos con Mayor Rotación
           </h3>
         </div>
 
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
+          <table class="min-w-full divide-y divide-gray-400">
             <thead class="bg-gray-50">
               <tr>
-                <th class="table-header">Producto</th>
-                <th class="table-header">Categoría</th>
-                <th class="table-header">Movimientos</th>
-                <th class="table-header">Rotación</th>
-                <th class="table-header">Stock Promedio</th>
-                <th class="table-header">Valor Movido</th>
+                <th class="table-header border-b-2 border-gray-400">Producto</th>
+                <th class="table-header border-b-2 border-gray-400">Categoría</th>
+                <th class="table-header border-b-2 border-gray-400">Movimientos</th>
+                <th class="table-header border-b-2 border-gray-400">Rotación</th>
+                <th class="table-header border-b-2 border-gray-400">Stock Promedio</th>
+                <th class="table-header border-b-2 border-gray-400">Valor Movido</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody class="bg-white divide-y divide-gray-300">
               <tr v-if="topProducts.length === 0">
                 <td colspan="6" class="px-6 py-8 text-center text-gray-500">
                   No hay datos disponibles para el período seleccionado
@@ -418,8 +418,8 @@
       </div>
 
       <!-- Alertas y recomendaciones -->
-      <div class="bg-white rounded-lg shadow">
-        <div class="px-6 py-4 border-b border-gray-200">
+      <div class="bg-white rounded-lg shadow border-4 border-yellow-400">
+        <div class="px-6 py-4 border-b-2 border-yellow-400 bg-yellow-50">
           <h3 class="text-lg font-medium text-gray-900">
             Alertas y Recomendaciones
           </h3>
@@ -517,20 +517,17 @@ import AppLayout from "../components/AppLayout.vue";
 const authStore = useAuthStore();
 const reportsStore = useReportsStore();
 
-// Estado reactivo
 const selectedPeriod = ref("30d");
 const customPeriod = ref({
   from: "",
   to: "",
 });
 
-// Computed
 const loading = computed(() => reportsStore.loading);
 const kpis = computed(() => reportsStore.kpis);
 const topProducts = computed(() => reportsStore.topProducts);
 const alerts = computed(() => reportsStore.alertas);
 
-// Métodos
 const loadData = async () => {
   const params: any = {};
 
