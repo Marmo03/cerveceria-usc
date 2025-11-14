@@ -2,7 +2,7 @@
   <AppLayout>
     <div class="max-w-4xl mx-auto">
       <!-- Header -->
-      <div class="mb-8">
+      <div class="mb-8 border-b-4 border-gray-300">
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-3xl font-bold text-gray-900">Mi Perfil</h1>
@@ -32,7 +32,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Información del usuario -->
         <div class="lg:col-span-1">
-          <div class="bg-white rounded-lg shadow p-6">
+          <div class="bg-white rounded-lg shadow p-6 border-4 border-blue-400">
             <div class="text-center">
               <!-- Avatar -->
               <div
@@ -75,7 +75,7 @@
           </div>
 
           <!-- Actividad reciente -->
-          <div class="bg-white rounded-lg shadow p-6 mt-6">
+          <div class="bg-white rounded-lg shadow p-6 mt-6 border-4 border-purple-400">
             <h3 class="text-lg font-medium text-gray-900 mb-4">
               Actividad Reciente
             </h3>
@@ -140,7 +140,7 @@
         <div class="lg:col-span-2">
           <form @submit.prevent="saveProfile" class="space-y-6">
             <!-- Información personal -->
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-white rounded-lg shadow p-6 border-4 border-green-400">
               <h3 class="text-lg font-medium text-gray-900 mb-4">
                 Información Personal
               </h3>
@@ -226,7 +226,7 @@
             </div>
 
             <!-- Configuración de notificaciones -->
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-white rounded-lg shadow p-6 border-4 border-yellow-400">
               <h3 class="text-lg font-medium text-gray-900 mb-4">
                 Configuración de Notificaciones
               </h3>
@@ -287,7 +287,7 @@
             </div>
 
             <!-- Cambio de contraseña -->
-            <div class="bg-white rounded-lg shadow p-6" v-if="editMode">
+            <div class="bg-white rounded-lg shadow p-6 border-4 border-purple-400" v-if="editMode">
               <h3 class="text-lg font-medium text-gray-900 mb-4">
                 Cambiar Contraseña
               </h3>

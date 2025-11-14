@@ -64,7 +64,7 @@
       </div>
 
       <!-- Filtros -->
-      <div class="bg-white rounded-lg shadow mb-6">
+      <div class="bg-white rounded-lg shadow mb-6 border-4 border-blue-400">
         <div class="p-6">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
@@ -111,7 +111,7 @@
 
       <!-- Estadísticas -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div class="stat-card">
+        <div class="stat-card border-4 border-blue-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-blue-100 text-blue-600">
             <svg
               class="h-8 w-8"
@@ -133,7 +133,7 @@
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card border-4 border-green-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-green-100 text-green-600">
             <svg
               class="h-8 w-8"
@@ -155,7 +155,7 @@
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card border-4 border-yellow-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-yellow-100 text-yellow-600">
             <svg
               class="h-8 w-8"
@@ -179,7 +179,7 @@
           </div>
         </div>
 
-        <div class="stat-card">
+        <div class="stat-card border-4 border-purple-400 rounded-lg bg-white shadow-lg">
           <div class="stat-icon bg-purple-100 text-purple-600">
             <svg
               class="h-8 w-8"
@@ -205,26 +205,26 @@
       </div>
 
       <!-- Tabla de productos -->
-      <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200">
+      <div class="bg-white rounded-lg shadow overflow-hidden border-4 border-gray-400">
+        <div class="px-6 py-4 border-b-2 border-gray-400 bg-gray-50">
           <h3 class="text-lg font-medium text-gray-900">Lista de Productos</h3>
         </div>
 
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
+          <table class="min-w-full divide-y divide-gray-400">
             <thead class="bg-gray-50">
               <tr>
-                <th class="table-header">SKU</th>
-                <th class="table-header">Nombre</th>
-                <th class="table-header">Categoría</th>
-                <th class="table-header">Stock Actual</th>
-                <th class="table-header">Stock Mínimo</th>
-                <th class="table-header">Costo</th>
-                <th class="table-header">Estado</th>
-                <th class="table-header">Acciones</th>
+                <th class="table-header border-b-2 border-gray-400">SKU</th>
+                <th class="table-header border-b-2 border-gray-400">Nombre</th>
+                <th class="table-header border-b-2 border-gray-400">Categoría</th>
+                <th class="table-header border-b-2 border-gray-400">Stock Actual</th>
+                <th class="table-header border-b-2 border-gray-400">Stock Mínimo</th>
+                <th class="table-header border-b-2 border-gray-400">Costo</th>
+                <th class="table-header border-b-2 border-gray-400">Estado</th>
+                <th class="table-header border-b-2 border-gray-400">Acciones</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody class="bg-white divide-y divide-gray-300">
               <tr
                 v-for="producto in filteredProductos"
                 :key="producto.id"
@@ -359,6 +359,7 @@
 </template>
 
 <script setup lang="ts">
+/* --- Sin cambios: todo el script igual --- */
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useProductsStore } from "../stores/products";
