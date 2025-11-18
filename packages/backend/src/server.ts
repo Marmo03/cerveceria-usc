@@ -5,7 +5,11 @@ import rateLimit from '@fastify/rate-limit'
 import jwt from '@fastify/jwt'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
-import { PrismaClient } from '@prisma/client'
+import pg from 'pg'
+import { config } from 'dotenv'
+
+// Cargar variables de entorno
+config()
 
 // Importar rutas
 import authRoutes from './controllers/auth.js'
@@ -41,13 +45,66 @@ const server: FastifyInstance = Fastify({
   },
 })
 
-// Instancia global de Prisma
-const prisma = new PrismaClient({
-  log: ['query', 'info', 'warn', 'error'],
+// Pool de conexiones de PostgreSQL
+console.log('=== CONFIGURACIÓN DE DATABASE ===')
+console.log('DATABASE_URL:', process.env.DATABASE_URL)
+console.log('=================================')
+
+const pool = new pg.Pool({
+  host: '127.0.0.1',
+  port: 5433,
+  database: 'cerveceria_usc',
+  user: 'cerveceria_user',
+  password: 'cerveceria_password',
+  max: 20,
 })
 
-// Decorar Fastify con Prisma para acceso global
-server.decorate('prisma', prisma)
+// Test de conexión inmediato
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('❌ ERROR DE CONEXIÓN AL POOL:', err.message)
+  } else {
+    console.log('✅ POOL CONECTADO EXITOSAMENTE:', res.rows[0])
+  }
+})
+
+// Decorar Fastify con el pool
+server.decorate('db', pool)
+
+// TEMPORAL: Mantener prisma decorador para compatibilidad con controladores antiguos
+// TODO: Migrar todos los controladores de fastify.prisma a fastify.db
+server.decorate('prisma', {
+  // Proxy que redirige a mensajes de error informativos cuando se intente usar
+  producto: {
+    findMany: async () => { throw new Error('MIGRACIÓN PENDIENTE: productos.findMany - Use fastify.db con SQL directo') },
+    findUnique: async () => { throw new Error('MIGRACIÓN PENDIENTE: productos.findUnique - Use fastify.db con SQL directo') },
+    create: async () => { throw new Error('MIGRACIÓN PENDIENTE: productos.create - Use fastify.db con SQL directo') },
+    update: async () => { throw new Error('MIGRACIÓN PENDIENTE: productos.update - Use fastify.db con SQL directo') },
+    count: async () => { throw new Error('MIGRACIÓN PENDIENTE: productos.count - Use fastify.db con SQL directo') },
+  },
+  user: {
+    findMany: async () => { throw new Error('MIGRACIÓN PENDIENTE: user.findMany - Use fastify.db con SQL directo') },
+    findUnique: async () => { throw new Error('MIGRACIÓN PENDIENTE: user.findUnique - Use fastify.db con SQL directo') },
+    findFirst: async () => { throw new Error('MIGRACIÓN PENDIENTE: user.findFirst - Use fastify.db con SQL directo') },
+    create: async () => { throw new Error('MIGRACIÓN PENDIENTE: user.create - Use fastify.db con SQL directo') },
+    update: async () => { throw new Error('MIGRACIÓN PENDIENTE: user.update - Use fastify.db con SQL directo') },
+  },
+  role: {
+    findMany: async () => { throw new Error('MIGRACIÓN PENDIENTE: role.findMany - Use fastify.db con SQL directo') },
+    findFirst: async () => { throw new Error('MIGRACIÓN PENDIENTE: role.findFirst - Use fastify.db con SQL directo') },
+  },
+  solicitudCompra: {
+    findMany: async () => { throw new Error('MIGRACIÓN PENDIENTE: solicitudCompra.findMany - Use fastify.db con SQL directo') },
+    findUnique: async () => { throw new Error('MIGRACIÓN PENDIENTE: solicitudCompra.findUnique - Use fastify.db con SQL directo') },
+    create: async () => { throw new Error('MIGRACIÓN PENDIENTE: solicitudCompra.create - Use fastify.db con SQL directo') },
+    update: async () => { throw new Error('MIGRACIÓN PENDIENTE: solicitudCompra.update - Use fastify.db con SQL directo') },
+  },
+  movimientoInventario: {
+    findMany: async () => { throw new Error('MIGRACIÓN PENDIENTE: movimientoInventario.findMany - Use fastify.db con SQL directo') },
+    count: async () => { throw new Error('MIGRACIÓN PENDIENTE: movimientoInventario.count - Use fastify.db con SQL directo') },
+  },
+  $transaction: async () => { throw new Error('MIGRACIÓN PENDIENTE: $transaction - Use BEGIN/COMMIT con fastify.db') },
+})
 
 // Decorar Fastify con funciones de autenticación
 server.decorate('authenticate', authenticate)
@@ -147,18 +204,18 @@ async function configureRoutes() {
   // Registrar rutas de la API
   await server.register(authRoutes, { prefix: '/api/auth' })
   await server.register(productosRoutes, { prefix: '/api/productos' })
-  await server.register(inventarioRoutes, { prefix: '/api/inventario' })
-  await server.register(salesRoutes, { prefix: '/api/sales' })
-  await server.register(reportsRoutes, { prefix: '/api/reports' })
-  await server.register(logisticsRoutes, { prefix: '/api/logistics' })
-  await server.register(solicitudesRoutes, { prefix: '/api/solicitudes' })
   await server.register(usuariosRoutes, { prefix: '/api/usuarios' })
+  await server.register(inventarioRoutes, { prefix: '/api/inventario' })
+  await server.register(solicitudesRoutes, { prefix: '/api/solicitudes' })
+  await server.register(salesRoutes, { prefix: '/api/sales' })
+  await server.register(logisticsRoutes, { prefix: '/api/logistics' }) // ✅ MIGRADO
+  await server.register(reportsRoutes, { prefix: '/api/reports' }) // ✅ MIGRADO
 }
 
 // Verificar salud de la base de datos
 async function checkDatabaseHealth(): Promise<boolean> {
   try {
-    await prisma.$queryRaw`SELECT 1`
+    await pool.query('SELECT 1')
     return true
   } catch (error) {
     server.log.error({ error }, 'Database health check failed')
@@ -193,9 +250,9 @@ server.setErrorHandler((error, request, reply) => {
   })
 })
 
-// Hook para cerrar conexión de Prisma al terminar el servidor
+// Hook para cerrar conexión del pool al terminar el servidor
 server.addHook('onClose', async () => {
-  await prisma.$disconnect()
+  await pool.end()
 })
 
 // Inicializar servidor
@@ -222,10 +279,22 @@ async function start() {
 process.on('SIGINT', () => server.close())
 process.on('SIGTERM', () => server.close())
 
+// Capturar errores no manejados
+process.on('uncaughtException', (error) => {
+  console.error('❌ UNCAUGHT EXCEPTION:', error)
+  process.exit(1)
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ UNHANDLED REJECTION at:', promise, 'reason:', reason)
+  process.exit(1)
+})
+
 // Declaración de tipos para TypeScript
 declare module 'fastify' {
   interface FastifyInstance {
-    prisma: PrismaClient
+    db: pg.Pool
+    prisma: any // TEMPORAL: Para compatibilidad con controladores no migrados
     authenticate: typeof authenticate
     requireRole: typeof requireRole
     requireActiveUser: typeof requireActiveUser
@@ -236,3 +305,6 @@ declare module 'fastify' {
 }
 
 start()
+
+// Mantener el proceso vivo
+setInterval(() => {}, 1000 * 60 * 60) // Cada hora

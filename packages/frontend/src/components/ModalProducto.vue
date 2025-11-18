@@ -403,8 +403,10 @@ const guardar = async () => {
 
     if (props.producto?.id) {
       await productsStore.updateProducto(props.producto.id, data);
+      alert('✅ Producto actualizado exitosamente');
     } else {
       await productsStore.createProducto(data);
+      alert('✅ Producto creado exitosamente');
     }
 
     emit("success");

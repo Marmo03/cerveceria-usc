@@ -63,6 +63,7 @@
                 @change="loadData"
                 class="input-field"
               >
+                <option value="all">Todos los datos</option>
                 <option value="7d">Últimos 7 días</option>
                 <option value="30d">Últimos 30 días</option>
                 <option value="90d">Últimos 90 días</option>
@@ -100,6 +101,7 @@
               >
                 <svg
                   class="h-4 w-4 mr-2"
+                  :class="{ 'animate-spin': loading }"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -111,7 +113,7 @@
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                   />
                 </svg>
-                Actualizar
+                {{ loading ? 'Actualizando...' : 'Actualizar' }}
               </button>
             </div>
           </div>
@@ -298,29 +300,40 @@
           <h3 class="text-lg font-medium text-gray-900 mb-4">
             Movimientos de Inventario
           </h3>
-          <div
-            class="h-64 bg-gray-100 rounded-lg flex items-center justify-center"
-          >
-            <div class="text-center">
-              <svg
-                class="mx-auto h-12 w-12 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-              <p class="mt-2 text-sm text-gray-500">
-                Gráfico de barras - Entradas vs Salidas
-              </p>
-              <p class="text-xs text-gray-400">
-                Integración con Chart.js pendiente
-              </p>
+          <div class="h-64">
+            <InventoryMovementsChart v-if="chartDataMovements" :data="chartDataMovements" />
+            <div v-else class="h-full bg-gray-100 rounded-lg flex items-center justify-center">
+              <div class="text-center">
+                <svg
+                  v-if="loading"
+                  class="mx-auto h-12 w-12 text-gray-400 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <svg
+                  v-else
+                  class="mx-auto h-12 w-12 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+                <p class="mt-2 text-sm text-gray-500">
+                  {{ loading ? 'Cargando datos...' : 'No hay movimientos en este período' }}
+                </p>
+                <p v-if="!loading" class="mt-1 text-xs text-gray-400">
+                  Prueba seleccionar "Todos los datos" o un período diferente
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -330,29 +343,40 @@
           <h3 class="text-lg font-medium text-gray-900 mb-4">
             Tendencia de Stock
           </h3>
-          <div
-            class="h-64 bg-gray-100 rounded-lg flex items-center justify-center"
-          >
-            <div class="text-center">
-              <svg
-                class="mx-auto h-12 w-12 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                />
-              </svg>
-              <p class="mt-2 text-sm text-gray-500">
-                Gráfico de líneas - Evolución temporal
-              </p>
-              <p class="text-xs text-gray-400">
-                Integración con Chart.js pendiente
-              </p>
+          <div class="h-64">
+            <StockTrendChart v-if="chartDataStock" :data="chartDataStock" />
+            <div v-else class="h-full bg-gray-100 rounded-lg flex items-center justify-center">
+              <div class="text-center">
+                <svg
+                  v-if="loading"
+                  class="mx-auto h-12 w-12 text-gray-400 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <svg
+                  v-else
+                  class="mx-auto h-12 w-12 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                  />
+                </svg>
+                <p class="mt-2 text-sm text-gray-500">
+                  {{ loading ? 'Cargando datos...' : 'No hay datos de tendencia en este período' }}
+                </p>
+                <p v-if="!loading" class="mt-1 text-xs text-gray-400">
+                  Prueba seleccionar "Todos los datos" o un período diferente
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -493,7 +517,8 @@
                 </p>
                 <div class="mt-2">
                   <button
-                    class="text-sm font-medium underline"
+                    @click="handleAlertAction(alert)"
+                    class="text-sm font-medium underline hover:no-underline transition-all"
                     :class="getAlertLinkClass(alert.type)"
                   >
                     {{ alert.action }}
@@ -513,11 +538,14 @@ import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import { useReportsStore } from "../stores/reports";
 import AppLayout from "../components/AppLayout.vue";
+import InventoryMovementsChart from "../components/charts/InventoryMovementsChart.vue";
+import StockTrendChart from "../components/charts/StockTrendChart.vue";
 
 const authStore = useAuthStore();
 const reportsStore = useReportsStore();
 
-const selectedPeriod = ref("30d");
+// Estado reactivo
+const selectedPeriod = ref("all");
 const customPeriod = ref({
   from: "",
   to: "",
@@ -526,6 +554,7 @@ const customPeriod = ref({
 const loading = computed(() => reportsStore.loading);
 const kpis = computed(() => reportsStore.kpis);
 const topProducts = computed(() => reportsStore.topProducts);
+const movimientos = computed(() => reportsStore.movimientosTemporales);
 const alerts = computed(() => reportsStore.alertas);
 
 const loadData = async () => {
@@ -538,15 +567,22 @@ const loadData = async () => {
     if (customPeriod.value.to) {
       params.hasta = new Date(customPeriod.value.to);
     }
-  } else {
+  } else if (selectedPeriod.value !== "all") {
+    // Si no es 'all', enviamos el período específico
     params.periodo = selectedPeriod.value;
   }
+  // Si es 'all', no enviamos parámetros de fecha para obtener todo
 
   await reportsStore.fetchAllData(params);
 };
 
-const refreshData = () => {
-  loadData();
+const refreshData = async () => {
+  try {
+    await loadData();
+    console.log('Datos actualizados correctamente');
+  } catch (error) {
+    console.error('Error al actualizar datos:', error);
+  }
 };
 
 const exportReport = () => {
@@ -621,6 +657,60 @@ const getAlertLinkClass = (type: string) => {
 
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat("es-CO").format(price);
+};
+
+// Computed para datos de gráficas
+const chartDataMovements = computed(() => {
+  if (!movimientos.value || movimientos.value.length === 0) return null;
+  
+  return {
+    labels: movimientos.value.map(m => {
+      const date = new Date(m.fecha);
+      return date.toLocaleDateString('es-CO', { month: 'short', day: 'numeric' });
+    }),
+    entradas: movimientos.value.map(m => m.entradas),
+    salidas: movimientos.value.map(m => m.salidas),
+  };
+});
+
+const chartDataStock = computed(() => {
+  if (!movimientos.value || movimientos.value.length === 0) return null;
+  
+  // Calcular stock acumulado basado en movimientos
+  let stockAcumulado = 0;
+  const stockPorFecha = movimientos.value.map(m => {
+    stockAcumulado += m.entradas - m.salidas;
+    return stockAcumulado;
+  });
+  
+  return {
+    labels: movimientos.value.map(m => {
+      const date = new Date(m.fecha);
+      return date.toLocaleDateString('es-CO', { month: 'short', day: 'numeric' });
+    }),
+    values: stockPorFecha,
+  };
+});
+
+const handleAlertAction = (alert: any) => {
+  const action = alert.action.toLowerCase();
+  
+  // Detectar el tipo de acción basado en el texto del botón
+  if (action.includes('productos') || action.includes('críticos') || action.includes('criticos')) {
+    // Navegar a productos con filtro de stock bajo
+    window.location.href = '/productos?filter=stock-bajo';
+  } else if (action.includes('análisis') || action.includes('analisis')) {
+    // Navegar a la sección de productos sin movimiento en la misma página
+    const alertSection = document.querySelector('.bg-white.rounded-lg.shadow:last-child');
+    if (alertSection) {
+      alertSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    // También podríamos mostrar más detalles o abrir un modal
+    console.log('Mostrando análisis detallado para:', alert.title);
+  } else {
+    // Acción por defecto: scroll a la sección de alertas
+    console.log('Acción de alerta:', alert.action, alert);
+  }
 };
 
 onMounted(() => {

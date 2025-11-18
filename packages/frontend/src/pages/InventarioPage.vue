@@ -271,7 +271,7 @@
                       {{ movimiento.producto?.nombre || "Producto" }}
                     </div>
                     <div class="text-sm text-gray-500">
-                      {{ movimiento.producto?.sku || movimiento.productoId }}
+                      {{ movimiento.producto?.codigo || movimiento.producto?.sku || movimiento.productoId }}
                     </div>
                   </td>
                   <td class="table-cell">
@@ -353,7 +353,21 @@
                     </span>
                   </td>
                   <td class="table-cell">
-                    <div class="text-sm text-gray-900">-</div>
+                    <div v-if="ultimosMovimientosPorProducto.get(item.id)" class="text-sm">
+                      <span :class="[
+                        'font-medium',
+                        ultimosMovimientosPorProducto.get(item.id).tipo === 'ENTRADA' 
+                          ? 'text-green-600' 
+                          : 'text-red-600'
+                      ]">
+                        {{ ultimosMovimientosPorProducto.get(item.id).tipo === 'ENTRADA' ? '+' : '-' }}
+                        {{ ultimosMovimientosPorProducto.get(item.id).cantidad }}
+                      </span>
+                      <div class="text-xs text-gray-500 mt-1">
+                        {{ formatDate(ultimosMovimientosPorProducto.get(item.id).fecha) }}
+                      </div>
+                    </div>
+                    <div v-else class="text-sm text-gray-400">Sin movimientos</div>
                   </td>
                   <td class="table-cell">
                     <button
@@ -468,6 +482,25 @@ const filters = ref({
 
 // Movimientos filtrados - simplificado, el filtrado se hace en el store
 const filteredMovimientos = computed(() => inventoryStore.movimientos);
+
+// Computed para obtener último movimiento de cada producto
+const ultimosMovimientosPorProducto = computed(() => {
+  const movimientosPorProducto = new Map<string, any>();
+  
+  // Ordenar movimientos por fecha (más reciente primero)
+  const movimientosOrdenados = [...inventoryStore.movimientos].sort((a, b) => 
+    new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+  );
+  
+  // Guardar solo el más reciente de cada producto
+  for (const mov of movimientosOrdenados) {
+    if (!movimientosPorProducto.has(mov.productoId)) {
+      movimientosPorProducto.set(mov.productoId, mov);
+    }
+  }
+  
+  return movimientosPorProducto;
+});
 
 // Estadísticas basadas en el store
 const stats = computed(() => ({

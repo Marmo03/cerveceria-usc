@@ -198,12 +198,12 @@ export const useInventoryStore = defineStore("inventory", {
           throw new Error(errorMsg);
         }
 
-        // Validar formato CUID (no UUID - el schema usa cuid())
-        // CUID tiene formato: c + timestamp (base36) + counter + fingerprint + random
-        // Ejemplo: cmhwrrhul0000941fnn46ripy (25 caracteres, empieza con 'c')
-        const cuidRegex = /^c[a-z0-9]{24}$/i;
-        if (!cuidRegex.test(data.productoId)) {
-          const errorMsg = `ProductoId no es un CUID válido: "${data.productoId}"`;
+        // Validar formato UUID
+        // UUID tiene formato: 8-4-4-4-12 caracteres hexadecimales
+        // Ejemplo: 68e688fd-2b3e-4ae1-9694-59fe768c856d
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(data.productoId)) {
+          const errorMsg = `ProductoId no es un UUID válido: "${data.productoId}"`;
           console.error("❌ [STORE] " + errorMsg);
           throw new Error(errorMsg);
         }

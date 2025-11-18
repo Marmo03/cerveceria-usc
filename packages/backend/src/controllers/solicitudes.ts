@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 // Schema de validación para crear solicitud
 const crearSolicitudSchema = z.object({
-  productoId: z.string().cuid(),
+  productoId: z.string().uuid(),
   cantidad: z.number().int().positive(),
   justificacion: z.string().optional(),
   urgente: z.boolean().optional().default(false),
@@ -55,15 +55,18 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
         const userId = request.currentUser!.userId
 
         // Verificar que el producto existe
-        const producto = await fastify.prisma.producto.findUnique({
-          where: { id: data.productoId },
-        })
+        const productoResult = await fastify.db.query(
+          'SELECT id, sku, nombre, costo FROM productos WHERE id = $1',
+          [data.productoId]
+        )
 
-        if (!producto) {
+        if (productoResult.rows.length === 0) {
           return reply.status(404).send({
             error: 'Producto no encontrado',
           })
         }
+
+        const producto = productoResult.rows[0]
 
         // Crear historial inicial
         const historial = [
@@ -76,27 +79,37 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
           },
         ]
 
-        // Crear la solicitud (directamente en estado PENDIENTE)
-        const solicitud = await fastify.prisma.solicitudCompra.create({
-          data: {
-            productoId: data.productoId,
-            cantidad: data.cantidad,
-            estado: 'PENDIENTE',
-            creadorId: userId,
-            historialJSON: JSON.stringify(historial),
-          },
-          include: {
-            producto: true,
-            creador: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        })
+        // Crear la solicitud
+        const { randomUUID } = await import('crypto')
+        const solicitudId = randomUUID()
+        const now = new Date()
+
+        const solicitudResult = await fastify.db.query(`
+          INSERT INTO solicitudes_compra (
+            id, "productoId", cantidad, estado, "creadorId", "historialJSON", "fechaCreacion"
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          RETURNING id, "productoId", cantidad, estado, "creadorId", "fechaCreacion", "historialJSON"
+        `, [
+          solicitudId,
+          data.productoId,
+          data.cantidad,
+          'PENDIENTE',
+          userId,
+          JSON.stringify(historial),
+          now
+        ])
+
+        // Obtener datos del creador
+        const creadorResult = await fastify.db.query(
+          'SELECT id, "firstName", "lastName", email FROM users WHERE id = $1',
+          [userId]
+        )
+
+        const solicitud = {
+          ...solicitudResult.rows[0],
+          producto,
+          creador: creadorResult.rows[0],
+        }
 
         reply.status(201).send(solicitud)
       } catch (error: any) {
@@ -147,46 +160,64 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         const { estado, productoId } = request.query
 
-        const where: any = {}
-        if (estado) where.estado = estado
-        if (productoId) where.productoId = productoId
+        // Construir WHERE dinámico
+        const conditions: string[] = []
+        const values: any[] = []
+        let paramCount = 0
 
-        const solicitudes = await fastify.prisma.solicitudCompra.findMany({
-          where,
-          include: {
-            producto: {
-              select: {
-                id: true,
-                sku: true,
-                nombre: true,
-                unidad: true,
-                costo: true,
-              },
-            },
-            creador: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-            aprobadorActual: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: {
-            fechaCreacion: 'desc',
-          },
-        })
+        if (estado) {
+          paramCount++
+          conditions.push(`sc.estado = $${paramCount}`)
+          values.push(estado)
+        }
+
+        if (productoId) {
+          paramCount++
+          conditions.push(`sc."productoId" = $${paramCount}`)
+          values.push(productoId)
+        }
+
+        const whereClause = conditions.length > 0 
+          ? `WHERE ${conditions.join(' AND ')}` 
+          : ''
+
+        const solicitudesResult = await fastify.db.query(`
+          SELECT 
+            sc.id, sc."productoId", sc.cantidad, sc.estado, sc."creadorId", 
+            sc."aprobadorActualId", sc."fechaCreacion", sc."historialJSON",
+            json_build_object(
+              'id', p.id,
+              'sku', p.sku,
+              'nombre', p.nombre,
+              'unidad', p.unidad,
+              'costo', p.costo
+            ) as producto,
+            json_build_object(
+              'id', c.id,
+              'firstName', c."firstName",
+              'lastName', c."lastName",
+              'email', c.email
+            ) as creador,
+            CASE 
+              WHEN sc."aprobadorActualId" IS NOT NULL THEN
+                json_build_object(
+                  'id', a.id,
+                  'firstName', a."firstName",
+                  'lastName', a."lastName",
+                  'email', a.email
+                )
+              ELSE NULL
+            END as "aprobadorActual"
+          FROM solicitudes_compra sc
+          INNER JOIN productos p ON sc."productoId" = p.id
+          INNER JOIN users c ON sc."creadorId" = c.id
+          LEFT JOIN users a ON sc."aprobadorActualId" = a.id
+          ${whereClause}
+          ORDER BY sc."fechaCreacion" DESC
+        `, values)
 
         // Parsear historialJSON y agregar campo urgente
-        const solicitudesConDatos = solicitudes.map((s: any) => {
+        const solicitudesConDatos = solicitudesResult.rows.map((s: any) => {
           let urgente = false
           try {
             const historial = JSON.parse(s.historialJSON || '[]')
@@ -238,45 +269,69 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         const { id } = request.params
 
-        const solicitud = await fastify.prisma.solicitudCompra.findUnique({
-          where: { id },
-          include: {
-            producto: true,
-            creador: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-            aprobadorActual: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-            aprobaciones: {
-              include: {
-                aprobador: {
-                  select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                    email: true,
-                  },
-                },
-              },
-            },
-          },
-        })
+        const solicitudResult = await fastify.db.query(`
+          SELECT 
+            sc.id, sc."productoId", sc.cantidad, sc.estado, sc."creadorId", 
+            sc."aprobadorActualId", sc."fechaCreacion", sc."historialJSON",
+            json_build_object(
+              'id', p.id,
+              'sku', p.sku,
+              'nombre', p.nombre,
+              'descripcion', p.descripcion,
+              'unidad', p.unidad,
+              'costo', p.costo,
+              'stockActual', p."stockActual",
+              'stockMin', p."stockMin"
+            ) as producto,
+            json_build_object(
+              'id', c.id,
+              'firstName', c."firstName",
+              'lastName', c."lastName",
+              'email', c.email
+            ) as creador,
+            CASE 
+              WHEN sc."aprobadorActualId" IS NOT NULL THEN
+                json_build_object(
+                  'id', a.id,
+                  'firstName', a."firstName",
+                  'lastName', a."lastName",
+                  'email', a.email
+                )
+              ELSE NULL
+            END as "aprobadorActual"
+          FROM solicitudes_compra sc
+          INNER JOIN productos p ON sc."productoId" = p.id
+          INNER JOIN users c ON sc."creadorId" = c.id
+          LEFT JOIN users a ON sc."aprobadorActualId" = a.id
+          WHERE sc.id = $1
+        `, [id])
 
-        if (!solicitud) {
+        if (solicitudResult.rows.length === 0) {
           return reply.status(404).send({
             error: 'Solicitud no encontrada',
           })
+        }
+
+        // Obtener aprobaciones si existen
+        const aprobacionesResult = await fastify.db.query(`
+          SELECT 
+            ap.id, ap."solicitudCompraId", ap."aprobadorId", ap.decision, 
+            ap.comentario, ap."fechaDecision",
+            json_build_object(
+              'id', u.id,
+              'firstName', u."firstName",
+              'lastName', u."lastName",
+              'email', u.email
+            ) as aprobador
+          FROM aprobaciones_solicitud ap
+          INNER JOIN users u ON ap."aprobadorId" = u.id
+          WHERE ap."solicitudCompraId" = $1
+          ORDER BY ap."fechaDecision" DESC
+        `, [id])
+
+        const solicitud = {
+          ...solicitudResult.rows[0],
+          aprobaciones: aprobacionesResult.rows,
         }
 
         reply.send(solicitud)
@@ -317,15 +372,18 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
         const { id } = request.params
         const userId = request.currentUser!.userId
 
-        const solicitud = await fastify.prisma.solicitudCompra.findUnique({
-          where: { id },
-        })
+        const solicitudResult = await fastify.db.query(
+          'SELECT id, estado, "historialJSON" FROM solicitudes_compra WHERE id = $1',
+          [id]
+        )
 
-        if (!solicitud) {
+        if (solicitudResult.rows.length === 0) {
           return reply.status(404).send({
             error: 'Solicitud no encontrada',
           })
         }
+
+        const solicitud = solicitudResult.rows[0]
 
         if (
           solicitud.estado !== 'EN_APROBACION' &&
@@ -344,27 +402,37 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
           comentario: 'Solicitud aprobada',
         })
 
-        const solicitudAprobada = await fastify.prisma.solicitudCompra.update({
-          where: { id },
-          data: {
-            estado: 'APROBADA',
-            aprobadorActualId: userId,
-            historialJSON: JSON.stringify(historial),
-          },
-          include: {
-            producto: true,
-            creador: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        })
+        await fastify.db.query(`
+          UPDATE solicitudes_compra 
+          SET estado = $1, "aprobadorActualId" = $2, "historialJSON" = $3
+          WHERE id = $4
+        `, ['APROBADA', userId, JSON.stringify(historial), id])
 
-        reply.send(solicitudAprobada)
+        // Obtener solicitud actualizada con relaciones
+        const solicitudAprobadaResult = await fastify.db.query(`
+          SELECT 
+            sc.id, sc."productoId", sc.cantidad, sc.estado, sc."creadorId", 
+            sc."aprobadorActualId", sc."fechaCreacion", sc."historialJSON",
+            json_build_object(
+              'id', p.id,
+              'sku', p.sku,
+              'nombre', p.nombre,
+              'unidad', p.unidad,
+              'costo', p.costo
+            ) as producto,
+            json_build_object(
+              'id', c.id,
+              'firstName', c."firstName",
+              'lastName', c."lastName",
+              'email', c.email
+            ) as creador
+          FROM solicitudes_compra sc
+          INNER JOIN productos p ON sc."productoId" = p.id
+          INNER JOIN users c ON sc."creadorId" = c.id
+          WHERE sc.id = $1
+        `, [id])
+
+        reply.send(solicitudAprobadaResult.rows[0])
       } catch (error: any) {
         request.log.error(error)
         reply.status(500).send({
@@ -411,15 +479,18 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
         const data = rechazarSolicitudSchema.parse(request.body)
         const userId = request.currentUser!.userId
 
-        const solicitud = await fastify.prisma.solicitudCompra.findUnique({
-          where: { id },
-        })
+        const solicitudResult = await fastify.db.query(
+          'SELECT id, estado, "historialJSON" FROM solicitudes_compra WHERE id = $1',
+          [id]
+        )
 
-        if (!solicitud) {
+        if (solicitudResult.rows.length === 0) {
           return reply.status(404).send({
             error: 'Solicitud no encontrada',
           })
         }
+
+        const solicitud = solicitudResult.rows[0]
 
         if (
           solicitud.estado !== 'EN_APROBACION' &&
@@ -438,27 +509,37 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
           comentario: data.comentario,
         })
 
-        const solicitudRechazada = await fastify.prisma.solicitudCompra.update({
-          where: { id },
-          data: {
-            estado: 'RECHAZADA',
-            aprobadorActualId: userId,
-            historialJSON: JSON.stringify(historial),
-          },
-          include: {
-            producto: true,
-            creador: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-              },
-            },
-          },
-        })
+        await fastify.db.query(`
+          UPDATE solicitudes_compra 
+          SET estado = $1, "aprobadorActualId" = $2, "historialJSON" = $3
+          WHERE id = $4
+        `, ['RECHAZADA', userId, JSON.stringify(historial), id])
 
-        reply.send(solicitudRechazada)
+        // Obtener solicitud actualizada con relaciones
+        const solicitudRechazadaResult = await fastify.db.query(`
+          SELECT 
+            sc.id, sc."productoId", sc.cantidad, sc.estado, sc."creadorId", 
+            sc."aprobadorActualId", sc."fechaCreacion", sc."historialJSON",
+            json_build_object(
+              'id', p.id,
+              'sku', p.sku,
+              'nombre', p.nombre,
+              'unidad', p.unidad,
+              'costo', p.costo
+            ) as producto,
+            json_build_object(
+              'id', c.id,
+              'firstName', c."firstName",
+              'lastName', c."lastName",
+              'email', c.email
+            ) as creador
+          FROM solicitudes_compra sc
+          INNER JOIN productos p ON sc."productoId" = p.id
+          INNER JOIN users c ON sc."creadorId" = c.id
+          WHERE sc.id = $1
+        `, [id])
+
+        reply.send(solicitudRechazadaResult.rows[0])
       } catch (error: any) {
         request.log.error(error)
         if (error instanceof z.ZodError) {

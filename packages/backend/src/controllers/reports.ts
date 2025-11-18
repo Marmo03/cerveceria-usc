@@ -9,8 +9,6 @@ const PeriodoQuerySchema = z.object({
 })
 
 export default async function reportsRoutes(fastify: FastifyInstance) {
-  const prisma = fastify.prisma
-
   // GET /api/reports/kpis - Obtener KPIs principales
   fastify.get(
     '/kpis',
@@ -53,7 +51,7 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
         const hasta = query.hasta || new Date()
         let desde = query.desde
 
-        if (!desde) {
+        if (!desde && query.periodo) {
           const dias =
             query.periodo === '7d'
               ? 7
@@ -66,70 +64,75 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
           desde.setDate(desde.getDate() - dias)
         }
 
-        // 1. Calcular Rotación de Inventario (Movimientos totales / Stock promedio)
-        const movimientos = await prisma.movimientosInventario.aggregate({
-          _sum: { cantidad: true },
-          where: {
-            fecha: { gte: desde, lte: hasta },
-          },
-        })
+        // Construir queries dinámicamente según si hay filtro de fecha
+        const fechaCondition = desde ? 'WHERE fecha >= $1 AND fecha <= $2' : ''
+        const fechaParams = desde ? [desde, hasta] : []
 
-        const productos = await prisma.producto.findMany({
-          where: { isActive: true },
-          select: { stockActual: true },
-        })
+        // 1. Calcular Rotación de Inventario (Movimientos totales / Stock promedio)
+        const movimientosQuery = desde
+          ? `SELECT COALESCE(SUM(cantidad), 0) as total FROM movimientos_inventario WHERE fecha >= $1 AND fecha <= $2`
+          : `SELECT COALESCE(SUM(cantidad), 0) as total FROM movimientos_inventario`
+        
+        const movimientosResult = await fastify.db.query(
+          movimientosQuery,
+          fechaParams
+        )
+        const totalMovimientos = Number(movimientosResult.rows[0]?.total || 0)
+
+        const productosResult = await fastify.db.query(
+          `SELECT "stockActual" FROM productos WHERE "isActive" = true`
+        )
+        const productos = productosResult.rows
 
         const stockPromedio =
-          productos.reduce((sum, p) => sum + p.stockActual, 0) /
+          productos.reduce((sum: number, p: any) => sum + p.stockActual, 0) /
           (productos.length || 1)
-        const rotacionInventario =
-          (movimientos._sum.cantidad || 0) / (stockPromedio || 1)
+        const rotacionInventario = totalMovimientos / (stockPromedio || 1)
 
         // 2. Calcular Tasa de Desabastecimiento (Productos bajo stock mínimo / Total productos)
-        const todosProductos = await prisma.producto.findMany({
-          where: { isActive: true },
-          select: { stockActual: true, stockMin: true },
-        })
+        const todosProductosResult = await fastify.db.query(
+          `SELECT "stockActual", "stockMin" FROM productos WHERE "isActive" = true`
+        )
+        const todosProductos = todosProductosResult.rows
 
         const productosStockBajo = todosProductos.filter(
-          (p) => p.stockActual <= p.stockMin
+          (p: any) => p.stockActual <= p.stockMin
         ).length
         const totalProductos = todosProductos.length
         const stockoutRate =
           totalProductos > 0 ? (productosStockBajo / totalProductos) * 100 : 0
 
         // 3. Calcular Costo de Inventario (Stock actual * Costo unitario)
-        const productosConCosto = await prisma.producto.findMany({
-          where: { isActive: true },
-          select: { stockActual: true, costo: true },
-        })
-
-        const costoInventario = productosConCosto.reduce(
-          (sum, p) => sum + p.stockActual * p.costo,
-          0
+        const costoResult = await fastify.db.query(
+          `SELECT COALESCE(SUM("stockActual" * costo), 0) as total FROM productos WHERE "isActive" = true`
         )
+        const costoInventario = Number(costoResult.rows[0]?.total || 0)
 
         // 4. Calcular Tiempo Promedio de Aprobación (En días)
-        const solicitudesAprobadas = await prisma.solicitudCompra.findMany({
-          where: {
-            estado: { in: ['APROBADA', 'RECHAZADA'] },
-            fechaActualizacion: { gte: desde, lte: hasta },
-          },
-          select: {
-            fechaCreacion: true,
-            fechaActualizacion: true,
-          },
-        })
+        const solicitudesQuery = desde
+          ? `SELECT "fechaCreacion", "fechaActualizacion" 
+             FROM solicitudes_compra 
+             WHERE estado IN ('APROBADA', 'RECHAZADA') 
+             AND "fechaActualizacion" >= $1 AND "fechaActualizacion" <= $2`
+          : `SELECT "fechaCreacion", "fechaActualizacion" 
+             FROM solicitudes_compra 
+             WHERE estado IN ('APROBADA', 'RECHAZADA')`
+        
+        const solicitudesResult = await fastify.db.query(
+          solicitudesQuery,
+          fechaParams
+        )
 
-        const tiemposAprobacion = solicitudesAprobadas.map((s) => {
+        const tiemposAprobacion = solicitudesResult.rows.map((s: any) => {
           const diff =
-            s.fechaActualizacion.getTime() - s.fechaCreacion.getTime()
+            new Date(s.fechaActualizacion).getTime() -
+            new Date(s.fechaCreacion).getTime()
           return diff / (1000 * 60 * 60 * 24) // Convertir a días
         })
 
         const tiempoAprobacion =
           tiemposAprobacion.length > 0
-            ? tiemposAprobacion.reduce((sum, t) => sum + t, 0) /
+            ? tiemposAprobacion.reduce((sum: number, t: number) => sum + t, 0) /
               tiemposAprobacion.length
             : 0
 
@@ -179,7 +182,7 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
         const hasta = query.hasta || new Date()
         let desde = query.desde
 
-        if (!desde) {
+        if (!desde && query.periodo) {
           const dias =
             query.periodo === '7d'
               ? 7
@@ -192,63 +195,69 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
           desde.setDate(desde.getDate() - dias)
         }
 
-        // Obtener movimientos agrupados por producto
-        const movimientosPorProducto =
-          await prisma.movimientosInventario.groupBy({
-            by: ['productoId'],
-            _count: { id: true },
-            _sum: { cantidad: true },
-            where: {
-              fecha: { gte: desde, lte: hasta },
-            },
-            orderBy: {
-              _count: { id: 'desc' },
-            },
-            take: query.limit,
-          })
+        // Query para obtener productos con mayor rotación
+        const productsQuery = desde
+          ? `
+          SELECT 
+            p.id,
+            p.codigo,
+            p.nombre,
+            p.categoria,
+            p.unidad,
+            p."stockActual",
+            COUNT(m.id) as movimientos,
+            COALESCE(SUM(m.cantidad), 0) as "cantidadMovida",
+            COALESCE(SUM(m.cantidad * p.costo), 0) as "valorMovido"
+          FROM productos p
+          LEFT JOIN movimientos_inventario m ON m."productoId" = p.id AND m.fecha >= $1 AND m.fecha <= $2
+          WHERE p."isActive" = true
+          GROUP BY p.id
+          ORDER BY "cantidadMovida" DESC
+          LIMIT $3
+        `
+          : `
+          SELECT 
+            p.id,
+            p.codigo,
+            p.nombre,
+            p.categoria,
+            p.unidad,
+            p."stockActual",
+            COUNT(m.id) as movimientos,
+            COALESCE(SUM(m.cantidad), 0) as "cantidadMovida",
+            COALESCE(SUM(m.cantidad * p.costo), 0) as "valorMovido"
+          FROM productos p
+          LEFT JOIN movimientos_inventario m ON m."productoId" = p.id
+          WHERE p."isActive" = true
+          GROUP BY p.id
+          ORDER BY "cantidadMovida" DESC
+          LIMIT $1
+        `
 
-        // Obtener detalles de los productos
-        const productoIds = movimientosPorProducto.map((m) => m.productoId)
-        const productos = await prisma.producto.findMany({
-          where: { id: { in: productoIds } },
-          select: {
-            id: true,
-            sku: true,
-            nombre: true,
-            categoria: true,
-            unidad: true,
-            stockActual: true,
-            costo: true,
-          },
-        })
+        const productsParams = desde ? [desde, hasta, query.limit] : [query.limit]
+        
+        const result = await fastify.db.query(productsQuery, productsParams)
 
         // Construir respuesta
-        const topProducts = movimientosPorProducto
-          .map((mov) => {
-            const producto = productos.find((p) => p.id === mov.productoId)
-            if (!producto) return null
+        const topProducts = result.rows.map((row: any) => {
+          const cantidadMovida = Number(row.cantidadMovida)
+          const valorMovido = Number(row.valorMovido || 0)
+          const rotacion =
+            row.stockActual > 0 ? cantidadMovida / row.stockActual : 0
 
-            const cantidadMovida = mov._sum.cantidad || 0
-            const valorMovido = cantidadMovida * producto.costo
-            const rotacion =
-              producto.stockActual > 0
-                ? cantidadMovida / producto.stockActual
-                : 0
-
-            return {
-              id: producto.id,
-              codigo: producto.sku,
-              nombre: producto.nombre,
-              categoria: producto.categoria,
-              unidad: producto.unidad,
-              movimientos: mov._count.id,
-              cantidadMovida,
-              rotacion: Number(rotacion.toFixed(2)),
-              stockActual: producto.stockActual,
-              valorMovido: Number(valorMovido.toFixed(2)),
-            }
-          })
-          .filter(Boolean)
+          return {
+            id: row.id,
+            codigo: row.codigo,
+            nombre: row.nombre,
+            categoria: row.categoria,
+            unidad: row.unidad,
+            movimientos: Number(row.movimientos),
+            cantidadMovida,
+            rotacion: Number(rotacion.toFixed(2)),
+            stockActual: row.stockActual,
+            valorMovido: Number(valorMovido.toFixed(2)),
+          }
+        })
 
         return reply.send({
           success: true,
@@ -280,7 +289,7 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
         const hasta = query.hasta || new Date()
         let desde = query.desde
 
-        if (!desde) {
+        if (!desde && query.periodo) {
           const dias =
             query.periodo === '7d'
               ? 7
@@ -293,18 +302,18 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
           desde.setDate(desde.getDate() - dias)
         }
 
-        // Obtener movimientos
-        const movimientos = await prisma.movimientosInventario.findMany({
-          where: {
-            fecha: { gte: desde, lte: hasta },
-          },
-          select: {
-            fecha: true,
-            tipo: true,
-            cantidad: true,
-          },
-          orderBy: { fecha: 'asc' },
-        })
+        // Obtener movimientos (todos si no hay filtro de fecha)
+        const movimientosQuery = desde
+          ? `SELECT fecha, tipo, cantidad FROM movimientos_inventario WHERE fecha >= $1 AND fecha <= $2 ORDER BY fecha ASC`
+          : `SELECT fecha, tipo, cantidad FROM movimientos_inventario ORDER BY fecha ASC`
+        
+        const movimientosParams = desde ? [desde, hasta] : []
+        
+        const movimientosResult = await fastify.db.query(
+          movimientosQuery,
+          movimientosParams
+        )
+        const movimientos = movimientosResult.rows
 
         // Agrupar por fecha y tipo
         const agrupado: Record<
@@ -358,29 +367,26 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
         const alertas = []
 
         // 1. Productos con stock crítico
-        const todosLosProductos = await prisma.producto.findMany({
-          where: { isActive: true },
-          select: { nombre: true, stockActual: true, stockMin: true },
-        })
-
-        const productosStockBajo = todosLosProductos
-          .filter((p) => p.stockActual <= p.stockMin)
-          .slice(0, 3)
+        const productosStockBajoResult = await fastify.db.query(
+          `SELECT nombre FROM productos WHERE "isActive" = true AND "stockActual" <= "stockMin" LIMIT 3`
+        )
+        const productosStockBajo = productosStockBajoResult.rows
 
         if (productosStockBajo.length > 0) {
           alertas.push({
             id: 'stock-critico',
             type: 'warning',
             title: 'Stock crítico detectado',
-            description: `${productosStockBajo.length} producto(s) están por debajo del stock mínimo: ${productosStockBajo.map((p) => p.nombre).join(', ')}`,
+            description: `${productosStockBajo.length} producto(s) están por debajo del stock mínimo: ${productosStockBajo.map((p: any) => p.nombre).join(', ')}`,
             action: 'Ver productos críticos',
           })
         }
 
         // 2. Solicitudes pendientes de aprobación
-        const solicitudesPendientes = await prisma.solicitudCompra.count({
-          where: { estado: 'EN_APROBACION' },
-        })
+        const solicitudesPendientesResult = await fastify.db.query(
+          `SELECT COUNT(*) as total FROM solicitudes_compra WHERE estado = 'EN_APROBACION'`
+        )
+        const solicitudesPendientes = Number(solicitudesPendientesResult.rows[0]?.total || 0)
 
         if (solicitudesPendientes > 0) {
           alertas.push({
@@ -396,16 +402,16 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
         const hace30Dias = new Date()
         hace30Dias.setDate(hace30Dias.getDate() - 30)
 
-        const productosSinMovimiento = await prisma.producto.count({
-          where: {
-            isActive: true,
-            movimientos: {
-              none: {
-                fecha: { gte: hace30Dias },
-              },
-            },
-          },
-        })
+        const productosSinMovimientoResult = await fastify.db.query(
+          `SELECT COUNT(*) as total FROM productos p 
+           WHERE p."isActive" = true 
+           AND NOT EXISTS (
+             SELECT 1 FROM movimientos_inventario mi 
+             WHERE mi."productoId" = p.id AND mi.fecha >= $1
+           )`,
+          [hace30Dias]
+        )
+        const productosSinMovimiento = Number(productosSinMovimientoResult.rows[0]?.total || 0)
 
         if (productosSinMovimiento > 0) {
           alertas.push({

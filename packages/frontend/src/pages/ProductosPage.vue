@@ -379,6 +379,7 @@ const filters = ref({
   search: "",
   categoria: "",
   activo: "",
+  stockBajo: false, // Nuevo filtro para stock bajo
 });
 
 // Productos desde el store
@@ -414,7 +415,14 @@ const filteredProductos = computed(() => {
       (producto.isActive !== undefined &&
         producto.isActive.toString() === filters.value.activo);
 
-    return matchesSearch && matchesCategoria && matchesActivo;
+    // Nuevo: Filtro de stock bajo
+    const matchesStockBajo =
+      !filters.value.stockBajo ||
+      (producto.stockActual !== undefined &&
+        producto.stockMin !== undefined &&
+        producto.stockActual <= producto.stockMin);
+
+    return matchesSearch && matchesCategoria && matchesActivo && matchesStockBajo;
   });
 });
 
@@ -439,7 +447,12 @@ const resetFilters = () => {
     search: "",
     categoria: "",
     activo: "",
+    stockBajo: false,
   };
+  // Limpiar el parámetro de URL también
+  const url = new URL(window.location.href);
+  url.searchParams.delete('filter');
+  window.history.replaceState({}, '', url.toString());
 };
 
 const getCategoriaClass = (categoria: string) => {
@@ -525,6 +538,15 @@ onMounted(async () => {
   console.log("Auth store token:", authStore.token ? "presente" : "ausente");
   console.log("Auth store user:", authStore.user);
   console.log("Productos store inicial:", productsStore.productos);
+
+  // Verificar si hay un filtro en la URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const filterParam = urlParams.get('filter');
+  
+  if (filterParam === 'stock-bajo') {
+    console.log("Aplicando filtro de stock bajo desde URL");
+    filters.value.stockBajo = true;
+  }
 
   loading.value = true;
 
