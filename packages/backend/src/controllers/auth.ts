@@ -13,7 +13,7 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Password debe tener al menos 6 caracteres'),
   firstName: z.string().min(2, 'Nombre debe tener al menos 2 caracteres'),
   lastName: z.string().min(2, 'Apellido debe tener al menos 2 caracteres'),
-  roleId: z.string().cuid('ID de rol inválido'),
+  roleId: z.string().uuid('ID de rol inválido'),
 })
 
 interface LoginBody {
@@ -77,21 +77,25 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       fastify.log.info(`Intento de login para: ${email}`)
 
-      // Buscar usuario en base de datos
-      const user = await fastify.prisma.user.findUnique({
-        where: { email },
-        include: {
-          role: true,
-        },
-      })
+      // Buscar usuario en base de datos con SQL directo
+      const result = await fastify.db.query(
+        `SELECT u.id, u.email, u.password, u."firstName", u."lastName", u."roleId", u."isActive",
+                r.name as role_name, r.permissions as role_permissions 
+         FROM users u 
+         JOIN roles r ON u."roleId" = r.id 
+         WHERE u.email = $1`,
+        [email]
+      )
 
-      if (!user) {
+      if (result.rows.length === 0) {
         fastify.log.warn(`Usuario no encontrado: ${email}`)
         return reply.status(401).send({
           success: false,
           message: 'Credenciales inválidas',
         })
       }
+
+      const user = result.rows[0]
 
       if (!user.isActive) {
         fastify.log.warn(`Usuario inactivo: ${email}`)
@@ -122,7 +126,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
         userId: user.id,
         email: user.email,
         roleId: user.roleId,
-        roleName: user.role.name,
+        roleName: user.role_name,
       })
 
       return reply.send({
@@ -134,9 +138,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
           firstName: user.firstName,
           lastName: user.lastName,
           role: {
-            id: user.role.id,
-            name: user.role.name,
-            permissions: JSON.parse(user.role.permissions || '{}'),
+            id: user.roleId,
+            name: user.role_name,
+            permissions: JSON.parse(user.role_permissions || '{}'),
           },
         },
       })
@@ -149,6 +153,13 @@ export default async function authRoutes(fastify: FastifyInstance) {
         })
       }
 
+      console.error('=== ERROR COMPLETO EN LOGIN ===')
+      console.error('Tipo:', typeof error)
+      console.error('Error:', error)
+      console.error('Message:', error instanceof Error ? error.message : String(error))
+      console.error('Stack:', error instanceof Error ? error.stack : 'No stack')
+      console.error('================================')
+      
       fastify.log.error('Error en login:', error)
       return reply.status(500).send({
         success: false,
@@ -180,11 +191,12 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const userData = registerSchema.parse(request.body)
 
       // Verificar si el email ya existe
-      const existingUser = await fastify.prisma.user.findUnique({
-        where: { email: userData.email },
-      })
+      const existingUserResult = await fastify.db.query(
+        `SELECT id FROM users WHERE email = $1`,
+        [userData.email]
+      )
 
-      if (existingUser) {
+      if (existingUserResult.rows.length > 0) {
         return reply.status(409).send({
           success: false,
           message: 'El email ya está registrado',
@@ -192,33 +204,32 @@ export default async function authRoutes(fastify: FastifyInstance) {
       }
 
       // Verificar que el rol existe
-      const role = await fastify.prisma.role.findUnique({
-        where: { id: userData.roleId },
-      })
+      const roleResult = await fastify.db.query(
+        `SELECT id, name FROM roles WHERE id = $1`,
+        [userData.roleId]
+      )
 
-      if (!role) {
+      if (roleResult.rows.length === 0) {
         return reply.status(400).send({
           success: false,
           message: 'Rol inválido',
         })
       }
 
+      const role = roleResult.rows[0]
+
       // Hash del password
       const hashedPassword = await bcrypt.hash(userData.password, 12)
 
       // Crear usuario
-      const user = await fastify.prisma.user.create({
-        data: {
-          email: userData.email,
-          password: hashedPassword,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          roleId: userData.roleId,
-        },
-        include: {
-          role: true,
-        },
-      })
+      const userResult = await fastify.db.query(
+        `INSERT INTO users (id, email, password, "firstName", "lastName", "roleId", "isActive", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, true, NOW(), NOW())
+         RETURNING id, email, "firstName", "lastName", "roleId"`,
+        [userData.email, hashedPassword, userData.firstName, userData.lastName, userData.roleId]
+      )
+
+      const user = userResult.rows[0]
 
       return reply.status(201).send({
         success: true,
@@ -229,8 +240,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
           firstName: user.firstName,
           lastName: user.lastName,
           role: {
-            id: user.role.id,
-            name: user.role.name,
+            id: user.roleId,
+            name: role.name,
           },
         },
       })
@@ -262,12 +273,15 @@ export default async function authRoutes(fastify: FastifyInstance) {
     try {
       const userId = (request.user as any).userId
 
-      const user = await fastify.prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          role: true,
-        },
-      })
+      const result = await fastify.db.query(
+        `SELECT u.*, r.name as role_name, r.permissions as role_permissions 
+         FROM users u 
+         JOIN roles r ON u."roleId" = r.id 
+         WHERE u.id = $1`,
+        [userId]
+      )
+
+      const user = result.rows[0]
 
       if (!user) {
         return reply.status(404).send({
@@ -284,9 +298,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
           firstName: user.firstName,
           lastName: user.lastName,
           role: {
-            id: user.role.id,
-            name: user.role.name,
-            permissions: JSON.parse(user.role.permissions || '{}'),
+            id: user.roleId,
+            name: user.role_name,
+            permissions: JSON.parse(user.role_permissions || '{}'),
           },
         },
       })

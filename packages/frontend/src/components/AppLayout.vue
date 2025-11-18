@@ -8,22 +8,11 @@
       <!-- Logo -->
       <div class="flex items-center h-16 px-4 bg-blue-600">
         <div class="flex items-center w-full">
-          <div
-            class="h-8 w-8 bg-white rounded-full flex items-center justify-center mr-3 flex-shrink-0"
-          >
-            <svg
-              class="h-5 w-5 text-blue-600"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1zM10 6a2 2 0 0 1 4 0v1h-4V6zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10z"
-              />
-              <path
-                d="M12 12a1 1 0 0 0-1 1v2a1 1 0 0 0 2 0v-2a1 1 0 0 0-1-1z"
-              />
-            </svg>
-          </div>
+          <img 
+            src="/logo-cerveria.jpg" 
+            alt="Cervecería USACA Logo" 
+            class="h-10 w-10 object-contain mr-3 flex-shrink-0 bg-white rounded-lg p-0.5"
+          />
           <div class="flex flex-col min-w-0">
             <span class="text-lg font-bold text-white truncate"
               >Cervecería USC</span

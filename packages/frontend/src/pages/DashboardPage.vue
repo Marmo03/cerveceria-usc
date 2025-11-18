@@ -202,7 +202,10 @@
                 </div>
                 <div>
                   <p class="text-sm font-medium text-gray-900">
-                    {{ movimiento.producto }}
+                    {{ movimiento.productoNombre || movimiento.producto?.nombre || 'Producto desconocido' }}
+                  </p>
+                  <p class="text-xs text-gray-500">
+                    Código: {{ movimiento.productoSku || movimiento.producto?.codigo || movimiento.producto?.sku || 'N/A' }}
                   </p>
                   <p class="text-xs text-gray-500">
                     {{ formatDate(movimiento.fecha) }}
@@ -429,8 +432,13 @@ const alerts = computed(() => {
   }));
 });
 
-// Últimos movimientos desde el store
+// Últimos movimientos desde el resumen (que incluye los nombres de productos)
 const ultimosMovimientos = computed(() => {
+  // Si hay datos en el resumen, usarlos (incluyen productoNombre)
+  if (inventoryStore.resumen?.ultimosMovimientos) {
+    return inventoryStore.resumen.ultimosMovimientos.slice(0, 5);
+  }
+  // Fallback a movimientos regulares
   return inventoryStore.movimientos.slice(0, 5);
 });
 

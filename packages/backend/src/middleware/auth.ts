@@ -85,12 +85,12 @@ export async function requireActiveUser(
 
   try {
     // Verificar que el usuario sigue activo en la base de datos
-    const user = await request.server.prisma.user.findUnique({
-      where: { id: request.currentUser.userId },
-      select: { isActive: true },
-    })
+    const result = await request.server.db.query(
+      'SELECT "isActive" FROM users WHERE id = $1',
+      [request.currentUser.userId]
+    )
 
-    if (!user || !user.isActive) {
+    if (result.rows.length === 0 || !result.rows[0].isActive) {
       return reply.status(401).send({
         success: false,
         message: 'Usuario inactivo',

@@ -4,11 +4,11 @@
      <div class="w-full md:w-2/5 lg:w-1/3 flex flex-col justify-center px-10 py-8 bg-white shadow-md rounded-r-lg">
      
       <div class="flex items-center mb-8 -mt-6">
-        <div class="h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center mr-3 shadow-sm">
-          <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-          </svg>
-        </div>
+        <img 
+          src="/logo-cerveria.jpg" 
+          alt="Cervecería USACA Logo" 
+          class="h-20 w-20 object-contain mr-4"
+        />
         <div>
           <div class="font-semibold text-lg leading-tight">Cervecería USC</div>
           <div class="text-sm text-gray-400">Sistema de Gestión de Inventario</div>

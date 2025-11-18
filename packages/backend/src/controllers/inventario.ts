@@ -46,8 +46,7 @@ const PaginationSchema = z.object({
 const RegistrarMovimientoSchema = z.object({
   productoId: z
     .string()
-    .min(1, 'ID de producto es requerido')
-    .regex(/^c[a-z0-9]{24}$/i, 'ID de producto debe ser un CUID válido'),
+    .uuid('ID de producto debe ser un UUID válido'),
   tipo: z.enum(['ENTRADA', 'SALIDA'], {
     errorMap: () => ({ message: 'Tipo debe ser ENTRADA o SALIDA' }),
   }),
@@ -164,101 +163,125 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
           })
         }
 
-        // Verificar que el producto existe
-        const producto = await fastify.prisma.producto.findUnique({
-          where: { id: datosMovimiento.productoId },
-        })
+        // Usar transacción manual con pg para garantizar consistencia
+        const client = await fastify.db.connect()
+        
+        try {
+          await client.query('BEGIN')
 
-        if (!producto) {
-          return reply.status(404).send({
-            success: false,
-            error: 'Producto no encontrado',
-          })
-        }
+          // Verificar que el producto existe y obtener stock actual
+          const productoResult = await client.query(
+            'SELECT id, sku, nombre, "stockActual" FROM productos WHERE id = $1',
+            [datosMovimiento.productoId]
+          )
 
-        const stockAnterior = producto.stockActual
-
-        // Validar stock suficiente para salidas
-        if (datosMovimiento.tipo === 'SALIDA') {
-          if (producto.stockActual < datosMovimiento.cantidad) {
-            return reply.status(409).send({
+          if (productoResult.rows.length === 0) {
+            await client.query('ROLLBACK')
+            return reply.status(404).send({
               success: false,
-              error: 'Stock insuficiente',
-              details: [
-                {
-                  message: `Stock actual: ${producto.stockActual}, solicitado: ${datosMovimiento.cantidad}`,
-                },
-              ],
+              error: 'Producto no encontrado',
             })
           }
-        }
 
-        // Calcular nuevo stock
-        const stockNuevo =
-          datosMovimiento.tipo === 'ENTRADA'
-            ? stockAnterior + datosMovimiento.cantidad
-            : stockAnterior - datosMovimiento.cantidad
+          const producto = productoResult.rows[0]
+          const stockAnterior = producto.stockActual
 
-        // Usar transacción para garantizar consistencia
-        const resultado = await fastify.prisma.$transaction(async (prisma) => {
+          // Validar stock suficiente para salidas
+          if (datosMovimiento.tipo === 'SALIDA') {
+            if (producto.stockActual < datosMovimiento.cantidad) {
+              await client.query('ROLLBACK')
+              return reply.status(409).send({
+                success: false,
+                error: 'Stock insuficiente',
+                details: [
+                  {
+                    message: `Stock actual: ${producto.stockActual}, solicitado: ${datosMovimiento.cantidad}`,
+                  },
+                ],
+              })
+            }
+          }
+
+          // Calcular nuevo stock
+          const stockNuevo =
+            datosMovimiento.tipo === 'ENTRADA'
+              ? stockAnterior + datosMovimiento.cantidad
+              : stockAnterior - datosMovimiento.cantidad
+
           // Crear el movimiento
-          const movimiento = await prisma.movimientoInventario.create({
-            data: {
+          const { randomUUID } = await import('crypto')
+          const movimientoId = randomUUID()
+          const now = new Date()
+
+          const movimientoResult = await client.query(`
+            INSERT INTO movimientos_inventario (
+              id, "productoId", tipo, cantidad, "usuarioId", comentario, referencia, fecha, "createdAt"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id, "productoId", tipo, cantidad, "usuarioId", comentario, referencia, fecha
+          `, [
+            movimientoId,
+            datosMovimiento.productoId,
+            datosMovimiento.tipo,
+            datosMovimiento.cantidad,
+            usuarioId,
+            datosMovimiento.comentario || null,
+            datosMovimiento.referencia || null,
+            now,
+            now
+          ])
+
+          // Actualizar stock del producto
+          await client.query(
+            'UPDATE productos SET "stockActual" = $1, "updatedAt" = $2 WHERE id = $3',
+            [stockNuevo, now, datosMovimiento.productoId]
+          )
+
+          // Obtener datos del usuario
+          const usuarioResult = await client.query(
+            'SELECT email, "firstName", "lastName" FROM users WHERE id = $1',
+            [usuarioId]
+          )
+
+          await client.query('COMMIT')
+
+          const resultado = {
+            ...movimientoResult.rows[0],
+            producto: {
+              sku: producto.sku,
+              nombre: producto.nombre,
+            },
+            usuario: usuarioResult.rows[0] || null,
+            stockAnterior,
+            stockNuevo
+          }
+
+          request.log.info(
+            {
+              movimientoId: resultado.id,
               productoId: datosMovimiento.productoId,
               tipo: datosMovimiento.tipo,
               cantidad: datosMovimiento.cantidad,
-              usuarioId,
-              comentario: datosMovimiento.comentario,
-              referencia: datosMovimiento.referencia,
-              fecha: new Date(),
+              stockAnterior: resultado.stockAnterior,
+              stockNuevo: resultado.stockNuevo,
             },
-            include: {
-              producto: {
-                select: {
-                  sku: true,
-                  nombre: true,
-                },
-              },
-              usuario: {
-                select: {
-                  email: true,
-                  firstName: true,
-                  lastName: true,
-                },
-              },
+            'Movimiento de inventario registrado'
+          )
+
+          return reply.status(201).send({
+            success: true,
+            data: {
+              movimiento: resultado,
+              stockAnterior: resultado.stockAnterior,
+              stockNuevo: resultado.stockNuevo,
             },
+            message: 'Movimiento registrado exitosamente',
           })
-
-          // Actualizar stock del producto
-          await prisma.producto.update({
-            where: { id: datosMovimiento.productoId },
-            data: { stockActual: stockNuevo },
-          })
-
-          return movimiento
-        })
-
-        request.log.info(
-          {
-            movimientoId: resultado.id,
-            productoId: datosMovimiento.productoId,
-            tipo: datosMovimiento.tipo,
-            cantidad: datosMovimiento.cantidad,
-            stockAnterior,
-            stockNuevo,
-          },
-          'Movimiento de inventario registrado'
-        )
-
-        return reply.status(201).send({
-          success: true,
-          data: {
-            movimiento: resultado,
-            stockAnterior,
-            stockNuevo,
-          },
-          message: 'Movimiento registrado exitosamente',
-        })
+        } catch (error: any) {
+          await client.query('ROLLBACK')
+          throw error
+        } finally {
+          client.release()
+        }
       } catch (error: any) {
         request.log.error('Error registrando movimiento:', error)
 
@@ -339,66 +362,88 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         const filtros = FiltrosMovimientoSchema.parse(request.query)
 
-        // Construir filtros de Prisma
-        const where: any = {}
+        // Construir WHERE dinámico
+        const conditions: string[] = []
+        const values: any[] = []
+        let paramCount = 0
 
         if (filtros.productoId) {
-          where.productoId = filtros.productoId
+          paramCount++
+          conditions.push(`mi."productoId" = $${paramCount}`)
+          values.push(filtros.productoId)
         }
 
         if (filtros.tipo) {
-          where.tipo = filtros.tipo
+          paramCount++
+          conditions.push(`mi.tipo = $${paramCount}`)
+          values.push(filtros.tipo)
         }
 
-        if (filtros.fechaDesde || filtros.fechaHasta) {
-          where.fecha = {}
-          if (filtros.fechaDesde) {
-            where.fecha.gte = new Date(filtros.fechaDesde)
-          }
-          if (filtros.fechaHasta) {
-            where.fecha.lte = new Date(filtros.fechaHasta)
-          }
+        if (filtros.fechaDesde) {
+          paramCount++
+          conditions.push(`mi.fecha >= $${paramCount}`)
+          values.push(new Date(filtros.fechaDesde))
         }
+
+        if (filtros.fechaHasta) {
+          paramCount++
+          conditions.push(`mi.fecha <= $${paramCount}`)
+          values.push(new Date(filtros.fechaHasta))
+        }
+
+        const whereClause = conditions.length > 0 
+          ? `WHERE ${conditions.join(' AND ')}` 
+          : ''
 
         // Calcular paginación
         const page = filtros.page || 1
         const limit = filtros.limit || 20
-        const skip = (page - 1) * limit
+        const offset = (page - 1) * limit
 
-        // Obtener movimientos y total
-        const [movimientos, total] = await Promise.all([
-          fastify.prisma.movimientoInventario.findMany({
-            where,
-            skip,
-            take: limit,
-            orderBy: { fecha: 'desc' },
-            include: {
-              producto: {
-                select: {
-                  id: true,
-                  sku: true,
-                  nombre: true,
-                  categoria: true,
-                  unidad: true,
-                },
-              },
-              usuario: {
-                select: {
-                  id: true,
-                  email: true,
-                  firstName: true,
-                  lastName: true,
-                },
-              },
-            },
-          }),
-          fastify.prisma.movimientoInventario.count({ where }),
-        ])
+        // Obtener total
+        const countQuery = `SELECT COUNT(*) as total FROM movimientos_inventario mi ${whereClause}`
+        const countResult = await fastify.db.query(countQuery, values)
+        const total = parseInt(countResult.rows[0].total)
+
+        // Obtener movimientos con JOIN
+        paramCount++
+        const limitParam = paramCount
+        paramCount++
+        const offsetParam = paramCount
+        
+        const movimientosQuery = `
+          SELECT 
+            mi.id, mi."productoId", mi.tipo, mi.cantidad, mi."usuarioId", 
+            mi.comentario, mi.referencia, mi.fecha,
+            json_build_object(
+              'id', p.id,
+              'codigo', p.codigo,
+              'sku', p.codigo,
+              'nombre', p.nombre,
+              'categoria', p.categoria,
+              'unidad', p.unidad
+            ) as producto,
+            json_build_object(
+              'id', u.id,
+              'email', u.email,
+              'firstName', u."firstName",
+              'lastName', u."lastName"
+            ) as usuario
+          FROM movimientos_inventario mi
+          INNER JOIN productos p ON mi."productoId" = p.id
+          LEFT JOIN users u ON mi."usuarioId" = u.id
+          ${whereClause}
+          ORDER BY mi.fecha DESC
+          LIMIT $${limitParam} OFFSET $${offsetParam}
+        `
+        
+        values.push(limit, offset)
+        const movimientosResult = await fastify.db.query(movimientosQuery, values)
 
         const pages = Math.ceil(total / limit)
 
         return {
-          data: movimientos,
+          data: movimientosResult.rows,
           pagination: {
             page,
             limit,
@@ -469,65 +514,48 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       try {
-        // Obtener estadísticas de productos
-        const [totalProductos, productosActivos, productosStockBajo] =
-          await Promise.all([
-            fastify.prisma.producto.count(),
-            fastify.prisma.producto.count({ where: { isActive: true } }),
-            fastify.prisma.producto.count({
-              where: {
-                isActive: true,
-                // No podemos usar stockActual <= stockMin directamente en Prisma
-                // Lo calcularemos después
-              },
-            }),
-          ])
+        // Obtener estadísticas de productos en paralelo
+        const totalResult = await fastify.db.query('SELECT COUNT(*) as total FROM productos')
+        const activosResult = await fastify.db.query('SELECT COUNT(*) as total FROM productos WHERE "isActive" = true')
+        const stockBajoResult = await fastify.db.query(`
+          SELECT COUNT(*) as total 
+          FROM productos 
+          WHERE "isActive" = true AND "stockActual" <= "stockMin"
+        `)
 
-        // Obtener productos para calcular stock bajo y valor total
-        const productos = await fastify.prisma.producto.findMany({
-          where: { isActive: true },
-          select: {
-            stockActual: true,
-            stockMin: true,
-            costo: true,
-          },
-        })
-
-        // Calcular productos con stock bajo
-        const productosConStockBajo = productos.filter(
-          (p) => p.stockActual <= p.stockMin
-        ).length
+        const totalProductos = parseInt(totalResult.rows[0].total)
+        const productosActivos = parseInt(activosResult.rows[0].total)
+        const productosStockBajo = parseInt(stockBajoResult.rows[0].total)
 
         // Calcular valor total del inventario
-        const valorTotalInventario = productos.reduce(
-          (total, p) => total + p.stockActual * p.costo,
-          0
-        )
+        const valorResult = await fastify.db.query(`
+          SELECT COALESCE(SUM("stockActual" * costo), 0) as valor_total
+          FROM productos
+          WHERE "isActive" = true
+        `)
+        const valorTotalInventario = Math.round(parseFloat(valorResult.rows[0].valor_total) * 100) / 100
 
         // Obtener últimos movimientos
-        const ultimosMovimientos =
-          await fastify.prisma.movimientoInventario.findMany({
-            take: 10,
-            orderBy: { fecha: 'desc' },
-            include: {
-              producto: {
-                select: {
-                  nombre: true,
-                  sku: true,
-                },
-              },
-            },
-          })
+        const movimientosResult = await fastify.db.query(`
+          SELECT 
+            mi.id, mi.tipo, mi.cantidad, mi.fecha, mi.comentario, mi.referencia,
+            p.nombre as producto_nombre,
+            p.sku as producto_sku
+          FROM movimientos_inventario mi
+          INNER JOIN productos p ON mi."productoId" = p.id
+          ORDER BY mi.fecha DESC
+          LIMIT 10
+        `)
 
         const resumen = {
           totalProductos,
           productosActivos,
-          productosStockBajo: productosConStockBajo,
-          valorTotalInventario: Math.round(valorTotalInventario * 100) / 100,
-          ultimosMovimientos: ultimosMovimientos.map((m) => ({
+          productosStockBajo,
+          valorTotalInventario,
+          ultimosMovimientos: movimientosResult.rows.map((m) => ({
             id: m.id,
-            productoNombre: m.producto.nombre,
-            productoSku: m.producto.sku,
+            productoNombre: m.producto_nombre,
+            productoSku: m.producto_sku,
             tipo: m.tipo,
             cantidad: m.cantidad,
             fecha: m.fecha,
@@ -602,30 +630,21 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
     },
     async (request, reply) => {
       try {
-        // Obtener productos activos con su stock
-        const productos = await fastify.prisma.producto.findMany({
-          where: { isActive: true },
-          select: {
-            id: true,
-            sku: true,
-            nombre: true,
-            stockActual: true,
-            stockMin: true,
-            leadTime: true,
-            politicaAbastecimiento: {
-              select: {
-                stockSeguridad: true,
-              },
-            },
-          },
-        })
+        // Obtener productos activos con su stock y política
+        const productosResult = await fastify.db.query(`
+          SELECT 
+            p.id, p.sku, p.nombre, p."stockActual", p."stockMin", p."leadTime",
+            pa."stockSeguridad"
+          FROM productos p
+          LEFT JOIN politicas_abastecimiento pa ON p.id = pa."productoId"
+          WHERE p."isActive" = true AND p."stockActual" <= p."stockMin"
+        `)
 
-        // Filtrar productos con stock bajo y calcular prioridad
-        const alertas = productos
-          .filter((p) => p.stockActual <= p.stockMin)
+        // Procesar alertas con prioridades
+        const alertas = productosResult.rows
           .map((p) => {
             const porcentajeStock = (p.stockActual / p.stockMin) * 100
-            const stockSeguridad = p.politicaAbastecimiento?.stockSeguridad || 0
+            const stockSeguridad = p.stockSeguridad || 0
 
             // Calcular prioridad basada en el porcentaje de stock
             let prioridad: 'ALTA' | 'MEDIA' | 'BAJA'
@@ -640,7 +659,6 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
             }
 
             // Estimar días sin stock (simplificado)
-            // En un sistema real, esto se calcularía con la demanda promedio
             const diasSinStock = Math.max(
               0,
               Math.ceil((p.stockMin - p.stockActual) / 10)
