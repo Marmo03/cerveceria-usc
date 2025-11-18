@@ -1,0 +1,6 @@
+sku,cantidad,fecha,cliente,precio
+MALTA-001,50,2024-10-11T10:30:00Z,Cervecería Artesanal XYZ,3500
+LUPULO-001,200,2024-10-11T14:15:00Z,Homebrew Shop,850
+LEVAD-001,10,2024-10-11T16:45:00Z,Microbrewery ABC,12000
+ENV-BOT-330,500,2024-10-11T11:20:00Z,Cervecería Local,450
+ENV-TAP-330,500,2024-10-11T11:20:00Z,Cervecería Local,85

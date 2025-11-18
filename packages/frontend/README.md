@@ -16,17 +16,25 @@ Aplicación frontend desarrollada con Vue.js 3, Vite y TypeScript para el sistem
 ## 🚀 Desarrollo
 
 ### Prerrequisitos
+
 - Node.js >= 18.0.0
 - npm >= 9.0.0
 
 ### Instalación
+
 ```bash
 # Desde la raíz del monorepo
 npm install
 
 # O específicamente para frontend
 npm install -w packages/frontend
+
+# ⚠️ IMPORTANTE: Instalar dependencias de ESLint (requerido para commits)
+cd packages/frontend
+npm install --save-dev eslint-plugin-vue vue-eslint-parser
 ```
+
+> **Nota para colaboradores**: El proyecto usa `husky` y `lint-staged` para validar código antes de cada commit. Asegúrate de tener instaladas las dependencias de ESLint o los commits fallarán.
 
 ### Scripts Disponibles
 
@@ -84,6 +92,7 @@ packages/frontend/
 ## 🔧 Configuración
 
 ### Variables de Entorno
+
 Crea un archivo `.env.local` basado en `.env.example`:
 
 ```env
@@ -92,9 +101,11 @@ VITE_N8N_URL=http://localhost:5678
 ```
 
 ### Tailwind CSS
+
 El proyecto usa Tailwind CSS para estilos. La configuración está en `tailwind.config.js`.
 
 ### ESLint y Prettier
+
 - ESLint configurado para Vue.js + TypeScript
 - Prettier para formateo de código
 - Integración con VS Code
@@ -102,21 +113,25 @@ El proyecto usa Tailwind CSS para estilos. La configuración está en `tailwind.
 ## ⚡ Funcionalidades Principales
 
 ### 🏠 Dashboard
+
 - Vista general del sistema
 - Métricas y estadísticas
 - Accesos rápidos
 
 ### 👤 Autenticación
+
 - Login/logout
 - Gestión de sesiones
 - Protección de rutas
 
 ### 📊 Gestión de Cervecería
+
 - [Funcionalidades específicas del dominio]
 
 ## 🧪 Testing
 
 ### Tests Unitarios
+
 ```bash
 npm run test           # Ejecutar tests
 npm run test:coverage  # Con coverage
@@ -124,6 +139,7 @@ npm run test:ui        # Interfaz visual
 ```
 
 ### Tests E2E
+
 ```bash
 npm run test:e2e       # Ejecutar tests E2E
 npm run test:e2e:ui    # Con interfaz visual
@@ -132,18 +148,21 @@ npm run test:e2e:ui    # Con interfaz visual
 ## 🎨 Guía de Estilo
 
 ### Componentes
+
 - Usar Composition API
 - Componentes Single File Components (.vue)
 - Props con TypeScript interfaces
 - Emits tipados
 
 ### Convenciones de Nomenclatura
+
 - Componentes: PascalCase
 - Archivos: kebab-case
 - Variables: camelCase
 - Constantes: SCREAMING_SNAKE_CASE
 
 ### Estructura de Componentes
+
 ```vue
 <template>
   <!-- Template aquí -->
@@ -168,11 +187,13 @@ npm run test:e2e:ui    # Con interfaz visual
 ## 🔗 Integración con Backend
 
 ### API Client
+
 - Axios configurado con interceptors
 - Manejo de errores centralizado
 - Tipos TypeScript para requests/responses
 
 ### Estado Global
+
 - Pinia para gestión de estado
 - Stores modulares por funcionalidad
 - Persistencia cuando es necesaria
@@ -186,6 +207,7 @@ npm run test:e2e:ui    # Con interfaz visual
 ## 🚀 Deployment
 
 ### Build para Producción
+
 ```bash
 npm run build
 ```
@@ -193,7 +215,9 @@ npm run build
 El build se genera en `dist/` y está listo para servir desde cualquier servidor web estático.
 
 ### Variables de Entorno
+
 Configurar variables según el entorno:
+
 - `VITE_API_URL`: URL de la API backend
 - `VITE_N8N_URL`: URL de n8n para integraciones
 

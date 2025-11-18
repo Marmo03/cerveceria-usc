@@ -1,0 +1,7 @@
+sku,nombre,categoria,unidad,costo,stockInicial,stockMinimo,leadTime
+MALTA-001,Malta Base Pilsner,Materia Prima,KG,3500,500,100,15
+,Malta Sin SKU,Materia Prima,KG,4200,200,50,15
+LUPULO-DUPLICATE,Lúpulo Cascade,Materia Prima,GR,abc,2000,500,20
+LEVAD-001,,Materia Prima,UNIDADES,12000,50,20,10
+ENV-BOT-330,Botella Ámbar 330ml,Envases,UNIDADES,-450,5000,1000,7
+ENV-TAP-330,Tapa Corona,Envases,UNIDADES,85,texto,1000,7

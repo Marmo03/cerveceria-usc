@@ -1,0 +1,8 @@
+sku,stockActual,comentario
+MALTA-001,650,Recepción nueva de proveedor
+MALTA-002,180,Ajuste por conteo físico
+LUPULO-001,2500,Entrada de mercancía
+LEVAD-001,45,Ajuste por inventario
+ENV-BOT-330,4500,Ajuste de stock
+ENV-TAP-330,5200,Nueva remesa recibida
+ETIQ-001,200,Reposición de etiquetas
