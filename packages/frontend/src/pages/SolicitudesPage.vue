@@ -459,11 +459,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
+import { useToastStore } from "../stores/toast";
 import AppLayout from "../components/AppLayout.vue";
 import ModalSolicitud from "../components/ModalSolicitud.vue";
 import axios from "axios";
 
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 // Estado reactivo
@@ -626,6 +628,8 @@ const cargarSolicitudes = async () => {
 
 const onSolicitudCreada = async () => {
   await cargarSolicitudes();
+  // Cerrar modal manualmente después de recargar
+  showCreateModal.value = false;
 };
 
 const viewSolicitud = (solicitud: any) => {
@@ -653,13 +657,17 @@ const approveSolicitud = async (solicitud: any) => {
       {},
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    alert("Solicitud aprobada exitosamente");
+    toastStore.success(
+      'Solicitud aprobada exitosamente',
+      `${solicitud.cantidad} unidades de ${solicitud.producto?.nombre}`
+    );
     await cargarSolicitudes();
   } catch (error: any) {
     console.error("Error al aprobar solicitud:", error);
-    alert(
-      "Error al aprobar la solicitud: " +
-        (error.response?.data?.message || error.message)
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message;
+    toastStore.error(
+      'Error al aprobar la solicitud',
+      errorMsg
     );
   } finally {
     loading.value = false;
@@ -668,23 +676,33 @@ const approveSolicitud = async (solicitud: any) => {
 
 const rejectSolicitud = async (solicitud: any) => {
   const motivo = prompt("Ingrese el motivo del rechazo:");
-  if (!motivo) return;
+  if (!motivo || motivo.trim() === "") {
+    toastStore.warning('Rechazo cancelado', 'Debe proporcionar un motivo para rechazar');
+    return;
+  }
 
   loading.value = true;
   try {
     const token = authStore.token;
+    console.log('🔄 Rechazando solicitud:', solicitud.id);
+    console.log('📝 Datos a enviar:', { comentario: motivo });
+    
     await axios.patch(
       `${API_URL}/solicitudes/${solicitud.id}/rechazar`,
       { comentario: motivo },
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    alert("Solicitud rechazada");
+    
+    toastStore.success('Solicitud rechazada exitosamente', `Producto: ${solicitud.producto?.nombre}`);
     await cargarSolicitudes();
   } catch (error: any) {
-    console.error("Error al rechazar solicitud:", error);
-    alert(
-      "Error al rechazar la solicitud: " +
-        (error.response?.data?.message || error.message)
+    console.error("❌ Error al rechazar solicitud:", error);
+    console.error("❌ Response:", error.response?.data);
+    
+    const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message;
+    toastStore.error(
+      'Error al rechazar la solicitud',
+      errorMsg
     );
   } finally {
     loading.value = false;

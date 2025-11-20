@@ -225,7 +225,9 @@ export const useInventoryStore = defineStore("inventory", {
         console.log("✅ [STORE] Respuesta del backend:", response.data);
 
         // Recargar movimientos después de registrar
+        console.log("🔄 [STORE] Recargando movimientos...");
         await this.fetchMovimientos();
+        console.log("✅ [STORE] Movimientos recargados. Total:", this.movimientos.length);
 
         // Recargar resumen para actualizar estadísticas
         await this.fetchResumen();
@@ -268,6 +270,8 @@ export const useInventoryStore = defineStore("inventory", {
           }
         });
 
+        console.log("🔍 [STORE] Fetching movimientos con params:", params.toString());
+
         const response = await axios.get(
           `${API_URL}/inventario/movimientos?${params.toString()}`,
           {
@@ -277,7 +281,11 @@ export const useInventoryStore = defineStore("inventory", {
           }
         );
 
-        this.movimientos = response.data.data;
+        console.log("✅ [STORE] Response completa:", response.data);
+        console.log("✅ [STORE] Movimientos recibidos:", response.data.data?.length || 0);
+        console.log("📊 [STORE] Datos de movimientos:", response.data.data);
+        
+        this.movimientos = response.data.data || [];
         this.pagination = response.data.pagination;
       } catch (error: any) {
         this.error =

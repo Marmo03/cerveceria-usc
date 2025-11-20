@@ -19,6 +19,7 @@
 import { defineStore } from "pinia";
 import axios from "axios";
 import { useAuthStore } from "./auth";
+import { useToastStore } from "./toast";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -241,6 +242,9 @@ export const useProductsStore = defineStore("products", {
 
         console.log("✅ Producto creado exitosamente:", response.data);
 
+        const toastStore = useToastStore();
+        toastStore.success('Producto creado exitosamente');
+
         // Recargar la lista de productos después de crear
         await this.fetchProductos();
 
@@ -284,6 +288,9 @@ export const useProductsStore = defineStore("products", {
             this.productos[index] = this.productoActual;
           }
         }
+
+        const toastStore = useToastStore();
+        toastStore.success('Producto actualizado exitosamente');
 
         return response.data;
       } catch (error: any) {

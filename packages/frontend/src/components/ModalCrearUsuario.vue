@@ -229,8 +229,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, nextTick } from "vue";
 import { useUsuariosStore, type Role } from "../stores/usuarios";
+import { useToastStore } from "../stores/toast";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -243,6 +244,7 @@ const emit = defineEmits<{
 }>();
 
 const usuariosStore = useUsuariosStore();
+const toastStore = useToastStore();
 
 const loading = ref(false);
 const error = ref("");
@@ -310,13 +312,20 @@ const guardar = async () => {
 
     // Mostrar la contraseña temporal si se generó una
     if (result.message && result.message.includes("contraseña temporal")) {
-      alert(result.message);
+      toastStore.warning(
+        'Usuario creado con contraseña temporal',
+        result.message,
+        8000
+      );
     } else {
-      alert("Usuario creado exitosamente");
+      toastStore.success(
+        'Usuario creado exitosamente',
+        `${data.firstName} ${data.lastName}`
+      );
     }
 
+    // Solo emitir success, el padre cerrará el modal
     emit("success");
-    cerrar();
   } catch (err: any) {
     error.value =
       err.response?.data?.error || err.message || "Error al crear el usuario";

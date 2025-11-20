@@ -45,7 +45,9 @@
       </div>
 
       <!-- Tarjetas de resumen -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <CardSkeleton v-if="loading" :count="4" :columns="4" />
+      
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div class="card">
           <div class="flex items-center">
             <div class="p-3 rounded-full bg-blue-100 text-blue-600">
@@ -405,6 +407,7 @@ import { useAuthStore } from "../stores/auth";
 import { useProductsStore } from "../stores/products";
 import { useInventoryStore } from "../stores/inventory";
 import AppLayout from "../components/AppLayout.vue";
+import CardSkeleton from "../components/CardSkeleton.vue";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 

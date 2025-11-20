@@ -428,6 +428,101 @@ const usuariosRoutes: FastifyPluginAsync = async (fastify) => {
     }
   )
 
+  // PATCH /usuarios/:id/password - Cambiar contraseña de usuario (solo ADMIN)
+  fastify.patch<{
+    Params: { id: string }
+    Body: { newPassword: string }
+  }>(
+    '/:id/password',
+    {
+      preHandler: [fastify.authenticate, fastify.requireRole(['ADMIN'])],
+      schema: {
+        tags: ['Usuarios'],
+        summary: 'Cambiar contraseña de usuario',
+        description: 'Permite al ADMIN cambiar la contraseña de cualquier usuario',
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+        body: {
+          type: 'object',
+          required: ['newPassword'],
+          properties: {
+            newPassword: { 
+              type: 'string', 
+              minLength: 6,
+              description: 'Nueva contraseña (mínimo 6 caracteres)'
+            },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params
+        const { newPassword } = request.body
+
+        // Validar longitud de contraseña
+        if (!newPassword || newPassword.length < 6) {
+          return reply.status(400).send({
+            success: false,
+            error: 'La contraseña debe tener al menos 6 caracteres',
+          })
+        }
+
+        // Verificar que el usuario existe
+        const usuarioResult = await fastify.db.query(
+          'SELECT id, email, "firstName", "lastName" FROM users WHERE id = $1',
+          [id]
+        )
+
+        if (usuarioResult.rows.length === 0) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Usuario no encontrado',
+          })
+        }
+
+        const usuario = usuarioResult.rows[0]
+
+        // Hash de la nueva contraseña
+        const hashedPassword = await bcrypt.hash(newPassword, 10)
+
+        // Actualizar contraseña
+        await fastify.db.query(
+          'UPDATE users SET password = $1, "updatedAt" = $2 WHERE id = $3',
+          [hashedPassword, new Date(), id]
+        )
+
+        request.log.info(`Contraseña cambiada para usuario ${usuario.email} por admin ${request.currentUser!.email}`)
+
+        return reply.send({
+          success: true,
+          message: `Contraseña actualizada exitosamente para ${usuario.firstName} ${usuario.lastName}`,
+        })
+      } catch (error: any) {
+        request.log.error(error)
+        return reply.status(500).send({
+          success: false,
+          error: 'Error al cambiar contraseña',
+          message: error.message,
+        })
+      }
+    }
+  )
+
   // PATCH /usuarios/:id - Actualizar información de usuario (solo ADMIN)
   fastify.patch<{
     Params: { id: string }

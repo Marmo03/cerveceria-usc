@@ -113,7 +113,9 @@
       </div>
 
       <!-- Resumen de Stock -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <CardSkeleton v-if="loading" :count="4" :columns="4" />
+      
+      <div v-else class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <div class="stat-card">
           <div class="stat-icon bg-blue-100 text-blue-600">
             <svg
@@ -194,7 +196,7 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4.5c-.77-.834-1.964-.834-2.732 0L3.732 16c-.77.834.192 3 1.732 3z"
               />
             </svg>
           </div>
@@ -271,7 +273,7 @@
                       {{ movimiento.producto?.nombre || "Producto" }}
                     </div>
                     <div class="text-sm text-gray-500">
-                      {{ movimiento.producto?.codigo || movimiento.producto?.sku || movimiento.productoId }}
+                      {{ movimiento.producto?.sku || movimiento.productoId }}
                     </div>
                   </td>
                   <td class="table-cell">
@@ -449,6 +451,8 @@ import { useInventoryStore } from "../stores/inventory";
 import { useProductsStore } from "../stores/products";
 import AppLayout from "../components/AppLayout.vue";
 import ModalMovimiento from "../components/ModalMovimiento.vue";
+import TableSkeleton from "../components/TableSkeleton.vue";
+import CardSkeleton from "../components/CardSkeleton.vue";
 
 const authStore = useAuthStore();
 const inventoryStore = useInventoryStore();
@@ -481,7 +485,11 @@ const filters = ref({
 });
 
 // Movimientos filtrados - simplificado, el filtrado se hace en el store
-const filteredMovimientos = computed(() => inventoryStore.movimientos);
+const filteredMovimientos = computed(() => {
+  console.log('📋 Computed filteredMovimientos ejecutándose. Total en store:', inventoryStore.movimientos.length);
+  console.log('📋 Movimientos:', inventoryStore.movimientos);
+  return inventoryStore.movimientos;
+});
 
 // Computed para obtener último movimiento de cada producto
 const ultimosMovimientosPorProducto = computed(() => {
@@ -512,12 +520,15 @@ const stats = computed(() => ({
 
 // Métodos
 const loadInventoryData = async () => {
+  console.log('🔄 loadInventoryData: Iniciando carga de datos...');
   await Promise.all([
     inventoryStore.fetchMovimientos(),
     inventoryStore.fetchAlertas(),
     inventoryStore.fetchResumen(),
     productsStore.fetchProductos(),
   ]);
+  console.log('✅ loadInventoryData: Datos cargados. Movimientos:', inventoryStore.movimientos.length);
+  console.log('📊 Movimientos en store:', inventoryStore.movimientos);
 };
 
 const registrarMovimiento = async () => {
@@ -619,8 +630,12 @@ const ajustarStock = (item: any) => {
 };
 
 const onMovimientoRegistrado = async () => {
+  console.log('✅ Movimiento registrado, recargando datos...');
   // Recargar datos después de registrar un movimiento
   await loadInventoryData();
+  console.log('✅ Datos recargados. Movimientos actuales:', inventoryStore.movimientos.length);
+  // Cerrar modal después de recargar
+  showMovimientoModal.value = false;
 };
 
 onMounted(async () => {

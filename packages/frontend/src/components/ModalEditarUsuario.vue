@@ -85,8 +85,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, nextTick } from "vue";
 import { useUsuariosStore, type Usuario } from "../stores/usuarios";
+import { useToastStore } from "../stores/toast";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -99,6 +100,7 @@ const emit = defineEmits<{
 }>();
 
 const usuariosStore = useUsuariosStore();
+const toastStore = useToastStore();
 const loading = ref(false);
 const error = ref("");
 
@@ -136,9 +138,12 @@ const guardar = async () => {
 
   try {
     await usuariosStore.actualizarUsuario(props.usuario.id, form.value);
-    alert("Usuario actualizado exitosamente");
+    toastStore.success(
+      'Usuario actualizado exitosamente',
+      `${form.value.firstName} ${form.value.lastName}`
+    );
+    // Solo emitir success, el padre cerrará el modal
     emit("success");
-    cerrar(); // Cerrar el modal después del éxito
   } catch (err: any) {
     error.value = err.response?.data?.error || "Error al actualizar usuario";
   } finally {

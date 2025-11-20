@@ -385,12 +385,10 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
 
         const solicitud = solicitudResult.rows[0]
 
-        if (
-          solicitud.estado !== 'EN_APROBACION' &&
-          solicitud.estado !== 'PENDIENTE'
-        ) {
+        // Solo no permitir aprobar si ya fue aprobada o rechazada
+        if (solicitud.estado === 'APROBADA' || solicitud.estado === 'RECHAZADA') {
           return reply.status(400).send({
-            error: 'La solicitud no puede ser aprobada en su estado actual',
+            error: `La solicitud no puede ser aprobada porque ya fue ${solicitud.estado.toLowerCase()}`,
           })
         }
 
@@ -492,12 +490,10 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
 
         const solicitud = solicitudResult.rows[0]
 
-        if (
-          solicitud.estado !== 'EN_APROBACION' &&
-          solicitud.estado !== 'BORRADOR'
-        ) {
+        // Solo no permitir rechazar si ya fue aprobada o rechazada
+        if (solicitud.estado === 'APROBADA' || solicitud.estado === 'RECHAZADA') {
           return reply.status(400).send({
-            error: 'La solicitud no puede ser rechazada en su estado actual',
+            error: `La solicitud no puede ser rechazada porque ya fue ${solicitud.estado.toLowerCase()}`,
           })
         }
 

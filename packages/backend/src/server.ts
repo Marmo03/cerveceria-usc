@@ -20,6 +20,7 @@ import reportsRoutes from './controllers/reports.js'
 import logisticsRoutes from './controllers/logistics.js'
 import solicitudesRoutes from './controllers/solicitudes.js'
 import usuariosRoutes from './controllers/usuarios.js'
+import multipart from '@fastify/multipart'
 
 // Importar middleware de autenticación
 import {
@@ -135,6 +136,14 @@ async function configurePlugins() {
     secret: process.env.JWT_SECRET || 'super-secret-jwt-key',
     sign: {
       expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+    },
+  })
+
+  // Multipart para subida de archivos
+  await server.register(multipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10 MB
+      files: 1, // Un archivo a la vez
     },
   })
 

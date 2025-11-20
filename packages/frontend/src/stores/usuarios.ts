@@ -9,7 +9,7 @@ import { defineStore } from "pinia";
 import axios from "axios";
 import { useAuthStore } from "./auth";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
 // Interfaces
 export interface Role {
@@ -290,6 +290,36 @@ export const useUsuariosStore = defineStore("usuarios", {
      */
     async activarUsuario(usuarioId: string) {
       return this.actualizarUsuario(usuarioId, { isActive: true });
+    },
+
+    /**
+     * Cambiar contraseña de usuario (solo ADMIN)
+     */
+    async cambiarContrasena(usuarioId: string, newPassword: string) {
+      this.loading = true;
+      this.error = null;
+
+      try {
+        const authStore = useAuthStore();
+        const response = await axios.patch(
+          `${API_URL}/usuarios/${usuarioId}/password`,
+          { newPassword },
+          {
+            headers: {
+              Authorization: `Bearer ${authStore.token}`,
+            },
+          }
+        );
+
+        return response.data;
+      } catch (error: any) {
+        this.error =
+          error.response?.data?.error || "Error al cambiar contraseña";
+        console.error("Error changing password:", error);
+        throw error;
+      } finally {
+        this.loading = false;
+      }
     },
 
     /**

@@ -35,6 +35,7 @@
 
 import { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
+import { importarMovimientos } from './importador.js'
 
 // Schema de paginación
 const PaginationSchema = z.object({
@@ -417,8 +418,7 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
             mi.comentario, mi.referencia, mi.fecha,
             json_build_object(
               'id', p.id,
-              'codigo', p.codigo,
-              'sku', p.codigo,
+              'sku', p.sku,
               'nombre', p.nombre,
               'categoria', p.categoria,
               'unidad', p.unidad
@@ -704,6 +704,47 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
         })
       }
     }
+  )
+
+  // Ruta para importar movimientos de inventario desde archivo
+  fastify.post(
+    '/importar-movimientos',
+    {
+      onRequest: [fastify.authenticate, fastify.requireRole(['ADMIN', 'OPERARIO'])],
+      schema: {
+        description: 'Importar movimientos de inventario desde archivo Excel o CSV',
+        tags: ['inventario'],
+        consumes: ['multipart/form-data'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              procesados: { type: 'number' },
+              exitosos: { type: 'number' },
+              errores: { type: 'number' },
+              detalleErrores: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    linea: { type: 'number' },
+                    error: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    importarMovimientos
   )
 }
 

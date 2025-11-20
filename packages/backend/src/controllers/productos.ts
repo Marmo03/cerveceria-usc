@@ -38,6 +38,7 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { randomUUID } from 'crypto'
+import { importarProductos } from './importador.js'
 
 // Schemas de validación con Zod
 const CrearProductoSchema = z.object({
@@ -928,6 +929,47 @@ const productosRoutes: FastifyPluginAsync = async (fastify) => {
         })
       }
     }
+  )
+
+  // Ruta para importar productos desde archivo
+  fastify.post(
+    '/importar',
+    {
+      onRequest: [fastify.authenticate, fastify.requireRole(['ADMIN'])],
+      schema: {
+        description: 'Importar productos desde archivo Excel o CSV',
+        tags: ['productos'],
+        consumes: ['multipart/form-data'],
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              procesados: { type: 'number' },
+              exitosos: { type: 'number' },
+              errores: { type: 'number' },
+              detalleErrores: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    linea: { type: 'number' },
+                    error: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+          400: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    importarProductos
   )
 }
 

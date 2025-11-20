@@ -206,6 +206,7 @@
 import { ref, computed, watch } from "vue";
 import { useProductsStore } from "../stores/products";
 import { useAuthStore } from "../stores/auth";
+import { useToastStore } from "../stores/toast";
 import axios from "axios";
 
 const props = defineProps<{
@@ -219,6 +220,7 @@ const emit = defineEmits<{
 
 const productsStore = useProductsStore();
 const authStore = useAuthStore();
+const toastStore = useToastStore();
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -294,8 +296,13 @@ const guardar = async () => {
       }
     );
 
+    toastStore.success(
+      'Solicitud creada exitosamente',
+      `Producto: ${productoSeleccionado.value?.nombre} - Cantidad: ${form.value.cantidad}`
+    );
+    
+    // Solo emitir success, el padre cerrará el modal después de recargar
     emit("success");
-    cerrar();
   } catch (err: any) {
     error.value =
       err.response?.data?.message ||

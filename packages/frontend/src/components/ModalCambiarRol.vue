@@ -87,8 +87,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, nextTick } from "vue";
 import { useUsuariosStore, type Usuario, type Role } from "../stores/usuarios";
+import { useToastStore } from "../stores/toast";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -102,6 +103,7 @@ const emit = defineEmits<{
 }>();
 
 const usuariosStore = useUsuariosStore();
+const toastStore = useToastStore();
 const loading = ref(false);
 const error = ref("");
 const nuevoRol = ref("");
@@ -127,9 +129,11 @@ const getRoleLabel = (roleName: string) => {
 };
 
 const cerrar = () => {
+  console.log('🔄 Cerrando ModalCambiarRol');
   // Forzar reset de loading sin importar el estado
   loading.value = false;
   error.value = "";
+  nuevoRol.value = "";
   emit("update:modelValue", false);
 };
 
@@ -146,13 +150,14 @@ const guardar = async () => {
 
   try {
     await usuariosStore.actualizarRol(props.usuario.id, nuevoRol.value);
+    
+    toastStore.success(
+      'Rol cambiado exitosamente',
+      `${props.usuario.firstName} ${props.usuario.lastName} ahora es ${getRoleLabel(nuevoRol.value)}`
+    );
+    
+    // Solo emitir success, el padre cerrará el modal
     emit("success");
-    emit("update:modelValue", false); // Cerrar el modal
-
-    // Mostrar alerta después de cerrar
-    setTimeout(() => {
-      alert(`Rol cambiado exitosamente a ${getRoleLabel(nuevoRol.value)}`);
-    }, 100);
   } catch (err: any) {
     error.value = err.response?.data?.error || "Error al cambiar rol";
   } finally {

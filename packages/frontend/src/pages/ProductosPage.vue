@@ -40,6 +40,26 @@
               Volver al Dashboard
             </button>
             <button
+              v-if="authStore.hasAnyRole(['ADMIN'])"
+              @click="showImportModal = true"
+              class="btn bg-green-600 hover:bg-green-700 text-white"
+            >
+              <svg
+                class="h-4 w-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+              Importar Productos
+            </button>
+            <button
               v-if="authStore.hasAnyRole(['ADMIN', 'OPERARIO'])"
               @click="abrirModalCrear"
               class="btn btn-primary"
@@ -210,7 +230,12 @@
           <h3 class="text-lg font-medium text-gray-900">Lista de Productos</h3>
         </div>
 
-        <div class="overflow-x-auto">
+        <!-- Loading skeleton -->
+        <div v-if="loading">
+          <TableSkeleton :rows="10" :columns="8" />
+        </div>
+
+        <div v-else class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -345,6 +370,18 @@
             No se encontraron productos con los filtros aplicados.
           </p>
         </div>
+
+        <!-- Pagination -->
+        <Pagination
+          v-if="!loading && filteredProductos.length > 0 && productsStore.pagination"
+          :current-page="productsStore.pagination.page"
+          :total-pages="productsStore.pagination.pages"
+          :total="productsStore.pagination.total"
+          :per-page="productsStore.pagination.limit"
+          @previous="previousPage"
+          @next="nextPage"
+          @goto="(page: number) => productsStore.changePage(page)"
+        />
       </div>
     </div>
 
@@ -355,6 +392,13 @@
       :proveedores="[]"
       @success="onProductoGuardado"
     />
+
+    <!-- Modal de Importación -->
+    <ImportadorArchivos
+      v-model="showImportModal"
+      tipo="productos"
+      @success="onImportSuccess"
+    />
   </AppLayout>
 </template>
 
@@ -364,12 +408,17 @@ import { useAuthStore } from "../stores/auth";
 import { useProductsStore } from "../stores/products";
 import AppLayout from "../components/AppLayout.vue";
 import ModalProducto from "../components/ModalProducto.vue";
+import ImportadorArchivos from "../components/ImportadorArchivos.vue";
+import TableSkeleton from "../components/TableSkeleton.vue";
+import CardSkeleton from "../components/CardSkeleton.vue";
+import Pagination from "../components/Pagination.vue";
 
 const authStore = useAuthStore();
 const productsStore = useProductsStore();
 
 // Estado reactivo
 const showModal = ref(false);
+const showImportModal = ref(false);
 const productoSeleccionado = ref(null);
 const loading = ref(true); // Estado de carga local
 
@@ -503,6 +552,16 @@ const abrirModalCrear = () => {
 const onProductoGuardado = async () => {
   // Recargar productos después de guardar
   await productsStore.fetchProductos();
+  // Cerrar modal manualmente después de recargar
+  showModal.value = false;
+  productoSeleccionado.value = null;
+};
+
+const onImportSuccess = async () => {
+  // Recargar productos después de importar
+  await productsStore.fetchProductos();
+  // Cerrar modal
+  showImportModal.value = false;
 };
 
 const deleteProduct = async (producto: any) => {

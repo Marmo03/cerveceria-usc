@@ -289,8 +289,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, nextTick } from "vue";
 import { useProductsStore } from "../stores/products";
+import { useToastStore } from "../stores/toast";
 
 interface Proveedor {
   id: string;
@@ -323,6 +324,7 @@ const emit = defineEmits<{
 }>();
 
 const productsStore = useProductsStore();
+const toastStore = useToastStore();
 
 const loading = ref(false);
 const error = ref("");
@@ -403,12 +405,20 @@ const guardar = async () => {
 
     if (props.producto?.id) {
       await productsStore.updateProducto(props.producto.id, data);
+      toastStore.success(
+        'Producto actualizado exitosamente',
+        `${data.nombre} ha sido actualizado`
+      );
     } else {
       await productsStore.createProducto(data);
+      toastStore.success(
+        'Producto creado exitosamente',
+        `${data.nombre} ha sido creado`
+      );
     }
 
+    // Solo emitir success, el padre cerrará el modal después de recargar
     emit("success");
-    cerrar();
   } catch (err: any) {
     error.value =
       err.response?.data?.message ||

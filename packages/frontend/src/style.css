@@ -120,11 +120,19 @@ body {
   @apply text-gray-600 hover:bg-gray-100;
 }
 
+.btn-icon-warning {
+  @apply text-yellow-600 hover:bg-yellow-100;
+}
+
 .btn-icon-success {
   @apply text-green-600 hover:bg-green-100;
 }
 
 .btn-icon-error {
+  @apply text-red-600 hover:bg-red-100;
+}
+
+.btn-icon-danger {
   @apply text-red-600 hover:bg-red-100;
 }
 

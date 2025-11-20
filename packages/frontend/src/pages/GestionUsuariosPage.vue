@@ -324,6 +324,25 @@
                       </svg>
                     </button>
                     <button
+                      @click="cambiarContrasena(usuario)"
+                      class="btn-icon btn-icon-warning"
+                      title="Cambiar contraseña"
+                    >
+                      <svg
+                        class="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                        />
+                      </svg>
+                    </button>
+                    <button
                       v-if="usuario.isActive"
                       @click="confirmarDesactivar(usuario)"
                       class="btn-icon btn-icon-danger"
@@ -517,6 +536,36 @@ const cambiarRol = (usuario: Usuario) => {
   mostrarModalRol.value = true;
 };
 
+const cambiarContrasena = async (usuario: Usuario) => {
+  const nuevaContrasena = prompt(
+    `Ingrese la nueva contraseña para ${usuario.firstName} ${usuario.lastName}:\n\n(Mínimo 6 caracteres)`
+  );
+
+  if (!nuevaContrasena) {
+    return; // Usuario canceló
+  }
+
+  if (nuevaContrasena.length < 6) {
+    toastStore.error('Contraseña inválida', 'La contraseña debe tener al menos 6 caracteres');
+    return;
+  }
+
+  if (
+    !confirm(
+      `¿Confirmar cambio de contraseña para ${usuario.firstName} ${usuario.lastName}?`
+    )
+  ) {
+    return;
+  }
+
+  try {
+    await usuariosStore.cambiarContrasena(usuario.id, nuevaContrasena);
+    toastStore.success('Contraseña actualizada', `Contraseña de ${usuario.firstName} ${usuario.lastName} actualizada exitosamente`);
+  } catch (error: any) {
+    toastStore.error('Error al cambiar contraseña', error.message || 'Error desconocido');
+  }
+};
+
 const confirmarDesactivar = async (usuario: Usuario) => {
   if (
     confirm(
@@ -525,9 +574,9 @@ const confirmarDesactivar = async (usuario: Usuario) => {
   ) {
     try {
       await usuariosStore.desactivarUsuario(usuario.id);
-      alert("Usuario desactivado exitosamente");
+      toastStore.success('Usuario desactivado', 'El usuario ha sido desactivado exitosamente');
     } catch (error) {
-      alert("Error al desactivar usuario");
+      toastStore.error('Error al desactivar usuario');
     }
   }
 };
@@ -535,9 +584,9 @@ const confirmarDesactivar = async (usuario: Usuario) => {
 const activarUsuarioBtn = async (usuario: Usuario) => {
   try {
     await usuariosStore.activarUsuario(usuario.id);
-    alert("Usuario activado exitosamente");
+    toastStore.success('Usuario activado', 'El usuario ha sido activado exitosamente');
   } catch (error) {
-    alert("Error al activar usuario");
+    toastStore.error('Error al activar usuario');
   }
 };
 
@@ -550,7 +599,10 @@ const onUsuarioActualizado = () => {
   usuarioSeleccionado.value = null;
 };
 
-const onRolCambiado = () => {
+const onRolCambiado = async () => {
+  console.log('✅ Rol cambiado, recargando usuarios...');
+  await usuariosStore.init();
+  console.log('✅ Usuarios recargados, cerrando modal');
   mostrarModalRol.value = false;
   usuarioSeleccionado.value = null;
 };
