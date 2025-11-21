@@ -85,15 +85,15 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
           },
         ]
 
-        // Crear la solicitud
+        // Crear la solicitud con fecha actual
         const { randomUUID } = await import('crypto')
         const solicitudId = randomUUID()
-        const now = new Date()
+        const fechaActual = new Date()
 
         const solicitudResult = await fastify.db.query(`
           INSERT INTO solicitudes_compra (
-            id, "productoId", cantidad, estado, "creadorId", "historialJSON", "fechaCreacion"
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            id, "productoId", cantidad, estado, "creadorId", "historialJSON", "fechaCreacion", "fechaActualizacion"
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
           RETURNING id, "productoId", cantidad, estado, "creadorId", "fechaCreacion", "historialJSON"
         `, [
           solicitudId,
@@ -102,7 +102,8 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
           'PENDIENTE',
           userId,
           JSON.stringify(historial),
-          now
+          fechaActual,
+          fechaActual
         ])
 
         // Obtener datos del creador

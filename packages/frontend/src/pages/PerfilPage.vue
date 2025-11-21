@@ -29,7 +29,30 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Loading -->
+      <div v-if="loading" class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <p class="mt-4 text-gray-600">Cargando perfil...</p>
+      </div>
+
+      <!-- Error -->
+      <div v-else-if="loadError" class="text-center py-12">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+          <svg class="h-12 w-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">Error al cargar el perfil</h3>
+          <p class="text-sm text-gray-600 mb-4">No se pudo conectar con el servidor</p>
+          <button @click="loadProfile" class="btn btn-primary">
+            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Reintentar
+          </button>
+        </div>
+      </div>
+
+      <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Información del usuario -->
         <div class="lg:col-span-1">
           <div class="bg-white rounded-lg shadow p-6">
@@ -79,7 +102,14 @@
             <h3 class="text-lg font-medium text-gray-900 mb-4">
               Actividad Reciente
             </h3>
-            <div class="space-y-3">
+            
+            <!-- Sin actividad -->
+            <div v-if="recentActivity.length === 0" class="text-center py-8">
+              <p class="text-gray-500 text-sm">No hay actividad reciente</p>
+            </div>
+
+            <!-- Lista de actividades -->
+            <div v-else class="space-y-3">
               <div
                 v-for="activity in recentActivity"
                 :key="activity.id"
@@ -404,26 +434,31 @@
 import { ref, reactive, onMounted } from "vue";
 import { useAuthStore } from "../stores/auth";
 import AppLayout from "../components/AppLayout.vue";
+import axios from "axios";
 
 const authStore = useAuthStore();
 
 // Estado reactivo
 const editMode = ref(false);
 const saving = ref(false);
+const loading = ref(true);
+const loadError = ref(false);
 
 // Perfil del usuario
 const userProfile = reactive({
-  firstName: "Juan",
-  lastName: "Pérez",
-  email: "juan.perez@cerveceria-usc.com",
-  phone: "+57 300 123 4567",
-  position: "Supervisor de Producción",
-  department: "Producción",
-  role: "Operario",
+  id: "",
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  position: "",
+  department: "",
+  role: "",
+  isActive: true,
 });
 
 // Copia original para cancelar cambios
-const originalProfile = { ...userProfile };
+let originalProfile = { ...userProfile };
 
 // Configuración de notificaciones
 const notifications = reactive({
@@ -441,36 +476,59 @@ const passwordForm = reactive({
 
 // Estadísticas del usuario
 const userStats = ref({
-  solicitudes: 23,
-  aprobaciones: 156,
+  solicitudes: 0,
+  aprobaciones: 0,
 });
 
 // Actividad reciente
-const recentActivity = ref([
-  {
-    id: 1,
-    type: "solicitud",
-    title: "Solicitud creada",
-    description: "SC-2024-001: Materias primas para producción",
-    date: new Date("2024-01-15T10:30:00"),
-  },
-  {
-    id: 2,
-    type: "aprobacion",
-    title: "Solicitud aprobada",
-    description: "SC-2024-003: Material de empaque",
-    date: new Date("2024-01-14T16:45:00"),
-  },
-  {
-    id: 3,
-    type: "inventario",
-    title: "Movimiento registrado",
-    description: "Entrada de Malta Pilsner - 100 kg",
-    date: new Date("2024-01-14T09:15:00"),
-  },
-]);
+const recentActivity = ref<any[]>([]);
 
 // Métodos
+const loadProfile = async () => {
+  try {
+    loading.value = true;
+    loadError.value = false;
+
+    // Cargar perfil
+    const profileResponse = await axios.get("/usuarios/perfil");
+    if (profileResponse.data.success) {
+      const data = profileResponse.data.data;
+      Object.assign(userProfile, {
+        id: data.id,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone || "",
+        position: data.position || "",
+        department: data.department || "",
+        role: data.role.description || data.role.name,
+        isActive: data.isActive,
+      });
+
+      userStats.value = data.stats;
+
+      // Guardar copia original
+      originalProfile = { ...userProfile };
+    }
+
+    // Cargar actividad reciente
+    const activityResponse = await axios.get("/usuarios/perfil/actividad", {
+      params: { limit: 10 },
+    });
+    if (activityResponse.data.success) {
+      recentActivity.value = activityResponse.data.data.map((item: any) => ({
+        ...item,
+        date: new Date(item.date),
+      }));
+    }
+  } catch (error: any) {
+    console.error("Error cargando perfil:", error);
+    loadError.value = true;
+  } finally {
+    loading.value = false;
+  }
+};
+
 const toggleEditMode = () => {
   editMode.value = true;
 };
@@ -491,37 +549,81 @@ const saveProfile = async () => {
   saving.value = true;
 
   try {
-    // TODO: Validar formulario
-    if (passwordForm.new && passwordForm.new !== passwordForm.confirm) {
-      alert("Las contraseñas no coinciden");
-      saving.value = false;
-      return;
+    // Validar cambio de contraseña si se proporcionó
+    if (passwordForm.current || passwordForm.new || passwordForm.confirm) {
+      if (!passwordForm.current) {
+        alert("Debes ingresar tu contraseña actual");
+        saving.value = false;
+        return;
+      }
+
+      if (passwordForm.new !== passwordForm.confirm) {
+        alert("Las contraseñas nuevas no coinciden");
+        saving.value = false;
+        return;
+      }
+
+      if (passwordForm.new.length < 6) {
+        alert("La nueva contraseña debe tener al menos 6 caracteres");
+        saving.value = false;
+        return;
+      }
+
+      // Cambiar contraseña
+      const passwordResponse = await axios.put("/usuarios/perfil/password", {
+        currentPassword: passwordForm.current,
+        newPassword: passwordForm.new,
+      });
+
+      if (!passwordResponse.data.success) {
+        alert(passwordResponse.data.error || "Error al cambiar contraseña");
+        saving.value = false;
+        return;
+      }
     }
 
-    // TODO: Enviar datos al backend
-    await new Promise((resolve) => setTimeout(resolve, 1500)); // Simular API call
+    // Actualizar perfil
+    const profileResponse = await axios.put("/usuarios/perfil", {
+      firstName: userProfile.firstName,
+      lastName: userProfile.lastName,
+      phone: userProfile.phone || null,
+      position: userProfile.position || null,
+      department: userProfile.department || null,
+    });
 
-    // Actualizar copia original
-    Object.assign(originalProfile, userProfile);
+    if (profileResponse.data.success) {
+      // Actualizar copia original
+      originalProfile = { ...userProfile };
 
-    // Limpiar formulario de contraseña
-    passwordForm.current = "";
-    passwordForm.new = "";
-    passwordForm.confirm = "";
+      // Limpiar formulario de contraseña
+      passwordForm.current = "";
+      passwordForm.new = "";
+      passwordForm.confirm = "";
 
-    editMode.value = false;
+      editMode.value = false;
 
-    // TODO: Mostrar notificación de éxito
-    alert("Perfil actualizado correctamente");
-  } catch (error) {
+      alert("Perfil actualizado correctamente");
+
+      // Recargar perfil para obtener datos actualizados
+      await loadProfile();
+    } else {
+      alert(profileResponse.data.error || "Error al actualizar perfil");
+    }
+  } catch (error: any) {
     console.error("Error guardando perfil:", error);
-    alert("Error al guardar el perfil");
+    
+    if (error.response?.data?.error) {
+      alert(error.response.data.error);
+    } else {
+      alert("Error al guardar el perfil");
+    }
   } finally {
     saving.value = false;
   }
 };
 
 const getInitials = (firstName: string, lastName: string) => {
+  if (!firstName || !lastName) return "??";
   return `${firstName.charAt(0)}${lastName.charAt(0)}`;
 };
 
@@ -539,6 +641,7 @@ const formatRelativeTime = (date: Date) => {
   const diffTime = Math.abs(now.getTime() - date.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
+  if (diffDays === 0) return "Hoy";
   if (diffDays === 1) return "Ayer";
   if (diffDays < 7) return `Hace ${diffDays} días`;
   if (diffDays < 30) return `Hace ${Math.ceil(diffDays / 7)} semanas`;
@@ -546,7 +649,6 @@ const formatRelativeTime = (date: Date) => {
 };
 
 onMounted(() => {
-  // TODO: Cargar datos del perfil desde API
-  // userProfile = await fetchUserProfile()
+  loadProfile();
 });
 </script>

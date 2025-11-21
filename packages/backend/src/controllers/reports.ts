@@ -146,7 +146,7 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
           },
         })
       } catch (error) {
-        fastify.log.error('Error al obtener KPIs:', error)
+        fastify.log.error(error)
         return reply.status(500).send({
           success: false,
           message: 'Error al calcular KPIs',
@@ -264,7 +264,7 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
           data: topProducts,
         })
       } catch (error) {
-        fastify.log.error('Error al obtener top products:', error)
+        fastify.log.error(error)
         return reply.status(500).send({
           success: false,
           message: 'Error al obtener productos',
@@ -344,7 +344,7 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
           data: resultado,
         })
       } catch (error) {
-        fastify.log.error('Error al obtener movimientos temporales:', error)
+        fastify.log.error(error)
         return reply.status(500).send({
           success: false,
           message: 'Error al obtener movimientos',
@@ -428,7 +428,7 @@ export default async function reportsRoutes(fastify: FastifyInstance) {
           data: alertas,
         })
       } catch (error) {
-        fastify.log.error('Error al obtener alertas:', error)
+        fastify.log.error(error)
         return reply.status(500).send({
           success: false,
           message: 'Error al obtener alertas',

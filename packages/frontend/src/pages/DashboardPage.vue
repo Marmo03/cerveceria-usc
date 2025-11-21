@@ -429,6 +429,7 @@ const inventoryStore = useInventoryStore();
 
 // Estado reactivo
 const loading = ref(false);
+const dismissedAlerts = ref<string[]>([]);
 
 // Computed stats desde los stores
 const stats = computed(() => ({
@@ -440,11 +441,13 @@ const stats = computed(() => ({
 
 // Alertas basadas en el store de inventario
 const alerts = computed(() => {
-  return inventoryStore.alertasAlta.map((alerta) => ({
-    id: alerta.productoId,
-    message: `${alerta.nombre}: Stock crítico (${alerta.stockActual}/${alerta.stockMinimo} unidades)`,
-    type: "warning",
-  }));
+  return inventoryStore.alertasAlta
+    .filter((alerta) => !dismissedAlerts.value.includes(alerta.productoId))
+    .map((alerta) => ({
+      id: alerta.productoId,
+      message: `${alerta.nombre}: Stock crítico (${alerta.stockActual}/${alerta.stockMinimo} unidades)`,
+      type: "warning",
+    }));
 });
 
 // Últimos movimientos desde el resumen (que incluye los nombres de productos)
@@ -479,8 +482,10 @@ const formatDate = (dateString: string | Date): string => {
 };
 
 const dismissAlert = (id: string) => {
-  // Las alertas son computed, no se pueden modificar directamente
-  console.log("Dismissing alert:", id);
+  // Agregar el ID al array de alertas descartadas
+  if (!dismissedAlerts.value.includes(id)) {
+    dismissedAlerts.value.push(id);
+  }
 };
 
 const loadDashboardData = async () => {

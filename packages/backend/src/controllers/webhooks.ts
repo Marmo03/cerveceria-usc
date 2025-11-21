@@ -276,15 +276,16 @@ export default async function webhooksRoutes(fastify: FastifyInstance) {
           creadorId = usuarioSistemaResult.rows[0].id
         }
 
-        // Crear la solicitud
+        // Crear la solicitud con fecha actual explícita
         const { randomUUID } = await import('crypto')
         const solicitudId = randomUUID()
+        const fechaActual = new Date()
         const solicitudResult = await fastify.db.query(
           `INSERT INTO solicitudes_compra (
             id, "productoId", cantidad, estado, "creadorId", 
             "historialJSON", "fechaCreacion", "fechaActualizacion"
           )
-          VALUES ($1, $2, $3, 'PENDIENTE', $4, $5, NOW(), NOW())
+          VALUES ($1, $2, $3, 'PENDIENTE', $4, $5, $6, $7)
           RETURNING id, estado`,
           [
             solicitudId,
@@ -292,7 +293,7 @@ export default async function webhooksRoutes(fastify: FastifyInstance) {
             cantidad,
             creadorId,
             JSON.stringify([{
-              fecha: new Date().toISOString(),
+              fecha: fechaActual.toISOString(),
               accion: 'CREADA_AUTO',
               usuarioId: creadorId,
               tipo: 'AUTOMATICA_WEBHOOK',
@@ -300,6 +301,8 @@ export default async function webhooksRoutes(fastify: FastifyInstance) {
               comentario: observaciones ||
                 `Solicitud automática generada por RPA - Stock bajo detectado (${producto.stockActual} unidades)`,
             }]),
+            fechaActual,
+            fechaActual
           ]
         )
 

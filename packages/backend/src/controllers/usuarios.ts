@@ -151,7 +151,7 @@ const usuariosRoutes: FastifyPluginAsync = async (fastify) => {
         const result = await fastify.db.query(`
           SELECT DISTINCT ON (name) id, name, description, permissions
           FROM roles
-          ORDER BY name ASC
+          ORDER BY name, id ASC
         `)
 
         return reply.send({
@@ -724,6 +724,403 @@ const usuariosRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.status(500).send({
           success: false,
           error: 'Error al desactivar usuario',
+          message: error.message,
+        })
+      }
+    }
+  )
+
+  // GET /perfil - Obtener perfil del usuario actual
+  fastify.get(
+    '/perfil',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        description: 'Obtener perfil del usuario autenticado',
+        tags: ['Usuarios'],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  email: { type: 'string' },
+                  firstName: { type: 'string' },
+                  lastName: { type: 'string' },
+                  phone: { type: 'string', nullable: true },
+                  position: { type: 'string', nullable: true },
+                  department: { type: 'string', nullable: true },
+                  isActive: { type: 'boolean' },
+                  role: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                      description: { type: 'string' },
+                    },
+                  },
+                  stats: {
+                    type: 'object',
+                    properties: {
+                      solicitudes: { type: 'number' },
+                      aprobaciones: { type: 'number' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.currentUser!.userId
+
+        // Obtener datos del usuario con su rol
+        const userResult = await fastify.db.query(
+          `SELECT 
+            u.id,
+            u.email,
+            u."firstName",
+            u."lastName",
+            u.phone,
+            u.position,
+            u.department,
+            u."isActive",
+            r.id as role_id,
+            r.name as role_name,
+            r.description as role_description
+          FROM users u
+          LEFT JOIN roles r ON u."roleId" = r.id
+          WHERE u.id = $1`,
+          [userId]
+        )
+
+        if (userResult.rows.length === 0) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Usuario no encontrado',
+          })
+        }
+
+        const user = userResult.rows[0]
+
+        // Obtener estadísticas del usuario
+        const statsResult = await fastify.db.query(
+          `SELECT 
+            (SELECT COUNT(*) FROM solicitudes_compra WHERE "creadorId" = $1) as solicitudes,
+            (SELECT COUNT(*) FROM aprobaciones WHERE "aprobadorId" = $1) as aprobaciones
+          `,
+          [userId]
+        )
+
+        const stats = statsResult.rows[0] || { solicitudes: 0, aprobaciones: 0 }
+
+        return reply.send({
+          success: true,
+          data: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            position: user.position,
+            department: user.department,
+            isActive: user.isActive,
+            role: {
+              id: user.role_id,
+              name: user.role_name,
+              description: user.role_description,
+            },
+            stats: {
+              solicitudes: parseInt(stats.solicitudes),
+              aprobaciones: parseInt(stats.aprobaciones),
+            },
+          },
+        })
+      } catch (error: any) {
+        request.log.error(error)
+        return reply.status(500).send({
+          success: false,
+          error: 'Error al obtener perfil',
+          message: error.message,
+        })
+      }
+    }
+  )
+
+  // PUT /perfil - Actualizar perfil del usuario actual
+  fastify.put(
+    '/perfil',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        description: 'Actualizar perfil del usuario autenticado',
+        tags: ['Usuarios'],
+        body: {
+          type: 'object',
+          properties: {
+            firstName: { type: 'string', minLength: 2 },
+            lastName: { type: 'string', minLength: 2 },
+            phone: { type: 'string', nullable: true },
+            position: { type: 'string', nullable: true },
+            department: { type: 'string', nullable: true },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.currentUser!.userId
+        const { firstName, lastName, phone, position, department } =
+          request.body as any
+
+        const updates: string[] = []
+        const values: any[] = []
+        let paramIndex = 1
+
+        if (firstName !== undefined) {
+          updates.push(`"firstName" = $${paramIndex++}`)
+          values.push(firstName)
+        }
+        if (lastName !== undefined) {
+          updates.push(`"lastName" = $${paramIndex++}`)
+          values.push(lastName)
+        }
+        if (phone !== undefined) {
+          updates.push(`phone = $${paramIndex++}`)
+          values.push(phone)
+        }
+        if (position !== undefined) {
+          updates.push(`position = $${paramIndex++}`)
+          values.push(position)
+        }
+        if (department !== undefined) {
+          updates.push(`department = $${paramIndex++}`)
+          values.push(department)
+        }
+
+        if (updates.length === 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'No hay campos para actualizar',
+          })
+        }
+
+        updates.push(`"updatedAt" = $${paramIndex++}`)
+        values.push(new Date())
+
+        values.push(userId)
+
+        await fastify.db.query(
+          `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
+          values
+        )
+
+        return reply.send({
+          success: true,
+          message: 'Perfil actualizado correctamente',
+        })
+      } catch (error: any) {
+        request.log.error(error)
+        return reply.status(500).send({
+          success: false,
+          error: 'Error al actualizar perfil',
+          message: error.message,
+        })
+      }
+    }
+  )
+
+  // PUT /perfil/password - Cambiar contraseña del usuario actual
+  fastify.put(
+    '/perfil/password',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        description: 'Cambiar contraseña del usuario autenticado',
+        tags: ['Usuarios'],
+        body: {
+          type: 'object',
+          required: ['currentPassword', 'newPassword'],
+          properties: {
+            currentPassword: { type: 'string' },
+            newPassword: { type: 'string', minLength: 6 },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.currentUser!.userId
+        const { currentPassword, newPassword } = request.body as any
+
+        // Obtener contraseña actual del usuario
+        const userResult = await fastify.db.query(
+          'SELECT password FROM users WHERE id = $1',
+          [userId]
+        )
+
+        if (userResult.rows.length === 0) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Usuario no encontrado',
+          })
+        }
+
+        const user = userResult.rows[0]
+
+        // Verificar contraseña actual
+        const isValidPassword = await bcrypt.compare(
+          currentPassword,
+          user.password
+        )
+
+        if (!isValidPassword) {
+          return reply.status(400).send({
+            success: false,
+            error: 'La contraseña actual es incorrecta',
+          })
+        }
+
+        // Hash de la nueva contraseña
+        const hashedPassword = await bcrypt.hash(newPassword, 10)
+
+        // Actualizar contraseña
+        await fastify.db.query(
+          'UPDATE users SET password = $1, "updatedAt" = $2 WHERE id = $3',
+          [hashedPassword, new Date(), userId]
+        )
+
+        return reply.send({
+          success: true,
+          message: 'Contraseña actualizada correctamente',
+        })
+      } catch (error: any) {
+        request.log.error(error)
+        return reply.status(500).send({
+          success: false,
+          error: 'Error al cambiar contraseña',
+          message: error.message,
+        })
+      }
+    }
+  )
+
+  // GET /perfil/actividad - Obtener actividad reciente del usuario
+  fastify.get(
+    '/perfil/actividad',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        description: 'Obtener actividad reciente del usuario autenticado',
+        tags: ['Usuarios'],
+        querystring: {
+          type: 'object',
+          properties: {
+            limit: { type: 'number', default: 10 },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    type: { type: 'string' },
+                    title: { type: 'string' },
+                    description: { type: 'string' },
+                    date: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const userId = request.currentUser!.userId
+        const { limit = 10 } = request.query as any
+
+        // Obtener solicitudes creadas por el usuario
+        const solicitudesResult = await fastify.db.query(
+          `SELECT 
+            'solicitud-' || sc.id as id,
+            'solicitud' as type,
+            'Solicitud creada' as title,
+            'SC-' || TO_CHAR(sc."fechaCreacion", 'YYYY') || '-' || LPAD(sc.id::text, 3, '0') || ': ' || 
+              COALESCE(p.nombre, 'Sin producto') as description,
+            sc."fechaCreacion" as date
+          FROM solicitudes_compra sc
+          LEFT JOIN productos p ON sc."productoId" = p.id
+          WHERE sc."creadorId" = $1
+          ORDER BY sc."fechaCreacion" DESC
+          LIMIT $2`,
+          [userId, Math.floor(limit / 2)]
+        )
+
+        // Obtener aprobaciones realizadas por el usuario
+        const aprobacionesResult = await fastify.db.query(
+          `SELECT 
+            'aprobacion-' || a.id as id,
+            'aprobacion' as type,
+            'Solicitud ' || LOWER(a.estado) as title,
+            'SC-' || TO_CHAR(sc."fechaCreacion", 'YYYY') || '-' || LPAD(sc.id::text, 3, '0') as description,
+            a.fecha as date
+          FROM aprobaciones a
+          JOIN solicitudes_compra sc ON a."solicitudId" = sc.id
+          WHERE a."aprobadorId" = $1
+          ORDER BY a.fecha DESC
+          LIMIT $2`,
+          [userId, Math.floor(limit / 2)]
+        )
+
+        // Combinar y ordenar por fecha
+        const actividades = [
+          ...solicitudesResult.rows,
+          ...aprobacionesResult.rows,
+        ]
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, limit)
+
+        return reply.send({
+          success: true,
+          data: actividades,
+        })
+      } catch (error: any) {
+        request.log.error(error)
+        return reply.status(500).send({
+          success: false,
+          error: 'Error al obtener actividad',
           message: error.message,
         })
       }

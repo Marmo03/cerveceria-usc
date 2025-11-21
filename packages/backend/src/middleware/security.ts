@@ -78,7 +78,7 @@ const securityMiddlewaresPlugin: FastifyPluginAsync = async (fastify) => {
           })
         }
 
-        request.log.error('Error en autenticación:', error)
+        request.log.error(error)
         return reply.status(401).send({
           error: 'Error de autenticación',
           message: 'No se pudo verificar el token',
@@ -166,7 +166,7 @@ const securityMiddlewaresPlugin: FastifyPluginAsync = async (fastify) => {
     }
 
     // Error genérico del servidor
-    request.log.error('Error no manejado:', error)
+    request.log.error(error)
     return reply.status(500).send({
       error: 'Error interno del servidor',
       message: 'Ocurrió un error inesperado',

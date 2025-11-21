@@ -348,6 +348,13 @@ export const useInventoryStore = defineStore("inventory", {
     },
 
     /**
+     * Descarta/oculta una alerta específica
+     */
+    dismissAlert(alertaId: string) {
+      this.alertas = this.alertas.filter(alerta => alerta.id !== alertaId);
+    },
+
+    /**
      * Filtra movimientos por producto
      */
     async filtrarPorProducto(productoId: string) {

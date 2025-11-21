@@ -338,6 +338,26 @@
                       </svg>
                     </button>
                     <button
+                      v-if="authStore.hasAnyRole(['ADMIN', 'OPERARIO'])"
+                      @click="crearSolicitudProducto(producto)"
+                      class="btn-icon bg-green-100 text-green-600 hover:bg-green-200"
+                      title="Crear solicitud de pedido"
+                    >
+                      <svg
+                        class="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                        />
+                      </svg>
+                    </button>
+                    <button
                       v-if="authStore.hasAnyRole(['ADMIN'])"
                       @click="editProduct(producto)"
                       class="btn-icon btn-icon-secondary"
@@ -415,6 +435,12 @@
       tipo="productos"
       @success="onImportSuccess"
     />
+
+    <!-- Modal de Solicitud -->
+    <ModalSolicitud
+      v-model="showSolicitudModal"
+      @success="onSolicitudCreada"
+    />
   </AppLayout>
 </template>
 
@@ -423,8 +449,10 @@ import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { useProductsStore } from "../stores/products";
+import { useToastStore } from "../stores/toast";
 import AppLayout from "../components/AppLayout.vue";
 import ModalProducto from "../components/ModalProducto.vue";
+import ModalSolicitud from "../components/ModalSolicitud.vue";
 import ImportadorArchivos from "../components/ImportadorArchivos.vue";
 import TableSkeleton from "../components/TableSkeleton.vue";
 import CardSkeleton from "../components/CardSkeleton.vue";
@@ -433,11 +461,14 @@ import Pagination from "../components/Pagination.vue";
 const router = useRouter();
 const authStore = useAuthStore();
 const productsStore = useProductsStore();
+const toastStore = useToastStore();
 
 // Estado reactivo
 const showModal = ref(false);
 const showImportModal = ref(false);
+const showSolicitudModal = ref(false);
 const productoSeleccionado = ref(null);
+const productoParaSolicitud = ref(null);
 const loading = ref(true); // Estado de carga local
 
 // Filtros
@@ -563,6 +594,17 @@ const editProduct = (producto: any) => {
   showModal.value = true;
 };
 
+const crearSolicitudProducto = async (producto: any) => {
+  // Cargar producto completo si es necesario
+  if (!producto.costo || !producto.stockMin) {
+    await productsStore.fetchProductoById(producto.id);
+    productoParaSolicitud.value = productsStore.productoActual;
+  } else {
+    productoParaSolicitud.value = producto;
+  }
+  showSolicitudModal.value = true;
+};
+
 const abrirModalCrear = () => {
   productoSeleccionado.value = null;
   showModal.value = true;
@@ -581,6 +623,12 @@ const onImportSuccess = async () => {
   await productsStore.fetchProductos();
   // Cerrar modal
   showImportModal.value = false;
+};
+
+const onSolicitudCreada = () => {
+  showSolicitudModal.value = false;
+  productoParaSolicitud.value = null;
+  toastStore.success('Solicitud creada', 'La solicitud de pedido se ha creado exitosamente');
 };
 
 const deleteProduct = async (producto: any) => {
