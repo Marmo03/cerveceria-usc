@@ -32,6 +32,57 @@
               </svg>
               Volver al Dashboard
             </button>
+            
+            <!-- Botón de exportar productos aprobados -->
+            <div class="relative">
+              <button 
+                @click="showExportMenuAprobados = !showExportMenuAprobados"
+                class="btn btn-success flex items-center"
+                :disabled="solicitudesAprobadas.length === 0"
+              >
+                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Exportar Aprobados
+                <svg class="h-4 w-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              <div
+                v-if="showExportMenuAprobados"
+                class="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50"
+              >
+                <div class="py-1">
+                  <button
+                    @click="exportarAprobadosExcel"
+                    class="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-800"
+                  >
+                    <svg class="h-5 w-5 mr-3 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M15.8,20H14L12,13.2L10,20H8.2L5.5,11H7.3L9,17L11,10H13L15,17L16.7,11H18.5L15.8,20Z" />
+                    </svg>
+                    <div class="text-left">
+                      <div class="font-semibold">Exportar a Excel</div>
+                      <div class="text-xs text-gray-500">Lista de productos aprobados</div>
+                    </div>
+                  </button>
+                  
+                  <button
+                    @click="exportarAprobadosPDF"
+                    class="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-800"
+                  >
+                    <svg class="h-5 w-5 mr-3 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M15.2,20H13.8L12,13.2L10.2,20H8.8L6.6,11H8.1L9.5,17.8L11.3,11H12.7L14.5,17.8L15.9,11H17.4L15.2,20Z" />
+                    </svg>
+                    <div class="text-left">
+                      <div class="font-semibold">Exportar a PDF</div>
+                      <div class="text-xs text-gray-500">Documento para pedido</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
             <button
               v-if="authStore.hasAnyRole(['ADMIN', 'OPERARIO'])"
               @click="showCreateModal = true"
@@ -453,6 +504,13 @@
 
     <!-- Modal de Solicitud -->
     <ModalSolicitud v-model="showCreateModal" @success="onSolicitudCreada" />
+    
+    <!-- Modal de Detalle de Solicitud -->
+    <ModalDetalleSolicitud 
+      v-model="showDetailModal" 
+      :solicitud="solicitudSeleccionada"
+      @updated="cargarSolicitudes"
+    />
   </AppLayout>
 </template>
 
@@ -462,7 +520,9 @@ import { useAuthStore } from "../stores/auth";
 import { useToastStore } from "../stores/toast";
 import AppLayout from "../components/AppLayout.vue";
 import ModalSolicitud from "../components/ModalSolicitud.vue";
+import ModalDetalleSolicitud from "../components/ModalDetalleSolicitud.vue";
 import axios from "axios";
+import { exportarProductosAprobadosExcel, exportarProductosAprobadosPDF, type SolicitudAprobada } from "../services/exportSolicitudes";
 
 const authStore = useAuthStore();
 const toastStore = useToastStore();
@@ -471,6 +531,9 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 // Estado reactivo
 const loading = ref(false);
 const showCreateModal = ref(false);
+const showDetailModal = ref(false);
+const solicitudSeleccionada = ref<any>(null);
+const showExportMenuAprobados = ref(false);
 const activeTab = ref("todas");
 
 // Datos de solicitudes desde API
@@ -633,11 +696,8 @@ const onSolicitudCreada = async () => {
 };
 
 const viewSolicitud = (solicitud: any) => {
-  console.log("Ver solicitud:", solicitud);
-  // TODO: Implementar modal de detalles con todos los campos
-  alert(
-    `Solicitud: ${solicitud.id}\nProducto: ${solicitud.producto?.nombre || "N/A"}\nCantidad: ${solicitud.cantidad}\nEstado: ${solicitud.estado}`
-  );
+  solicitudSeleccionada.value = solicitud;
+  showDetailModal.value = true;
 };
 
 const approveSolicitud = async (solicitud: any) => {
@@ -652,19 +712,31 @@ const approveSolicitud = async (solicitud: any) => {
   loading.value = true;
   try {
     const token = authStore.token;
-    await axios.patch(
+    const response = await axios.patch(
       `${API_URL}/solicitudes/${solicitud.id}/aprobar`,
       {},
       { headers: { Authorization: `Bearer ${token}` } }
     );
+    console.log('✅ Solicitud aprobada:', response.data);
     toastStore.success(
       'Solicitud aprobada exitosamente',
       `${solicitud.cantidad} unidades de ${solicitud.producto?.nombre}`
     );
     await cargarSolicitudes();
   } catch (error: any) {
-    console.error("Error al aprobar solicitud:", error);
-    const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message;
+    console.error("❌ Error al aprobar solicitud:", error);
+    console.error("❌ Response data:", error.response?.data);
+    console.error("❌ Status:", error.response?.status);
+    
+    let errorMsg = 'Error desconocido';
+    if (error.response?.status === 403) {
+      errorMsg = 'No tienes permisos para aprobar solicitudes. Se requiere rol ADMIN o APROBADOR.';
+    } else if (error.response?.status === 401) {
+      errorMsg = 'Sesión expirada. Por favor, inicia sesión nuevamente.';
+    } else {
+      errorMsg = error.response?.data?.error || error.response?.data?.message || error.message;
+    }
+    
     toastStore.error(
       'Error al aprobar la solicitud',
       errorMsg
@@ -707,6 +779,52 @@ const rejectSolicitud = async (solicitud: any) => {
   } finally {
     loading.value = false;
   }
+};
+
+// Computed para solicitudes aprobadas (para exportación)
+const solicitudesAprobadas = computed<SolicitudAprobada[]>(() => {
+  return solicitudes.value
+    .filter(s => s.estado === 'APROBADA')
+    .map(s => ({
+      id: s.id.toString(),
+      fecha: formatDate(new Date(s.createdAt)),
+      solicitante: s.creadoPor 
+        ? `${s.creadoPor.firstName || ''} ${s.creadoPor.lastName || ''}`.trim() 
+        : 'N/A',
+      productos: [{
+        codigo: s.producto?.codigo || 'N/A',
+        nombre: s.producto?.nombre || 'N/A',
+        categoria: s.producto?.categoria || 'N/A',
+        cantidad: s.cantidad || 0,
+        unidad: s.producto?.unidad || 'unidad',
+        precioUnitario: s.producto?.costo || 0,
+        subtotal: (s.cantidad || 0) * (s.producto?.costo || 0),
+        proveedor: s.producto?.proveedor || 'N/A',
+        notas: s.observacion || ''
+      }],
+      total: (s.cantidad || 0) * (s.producto?.costo || 0)
+    }));
+});
+
+// Funciones de exportación
+const exportarAprobadosExcel = () => {
+  showExportMenuAprobados.value = false;
+  if (solicitudesAprobadas.value.length === 0) {
+    toastStore.warning('Sin datos', 'No hay solicitudes aprobadas para exportar');
+    return;
+  }
+  exportarProductosAprobadosExcel(solicitudesAprobadas.value);
+  toastStore.success('Excel generado', 'El archivo se ha descargado correctamente');
+};
+
+const exportarAprobadosPDF = () => {
+  showExportMenuAprobados.value = false;
+  if (solicitudesAprobadas.value.length === 0) {
+    toastStore.warning('Sin datos', 'No hay solicitudes aprobadas para exportar');
+    return;
+  }
+  exportarProductosAprobadosPDF(solicitudesAprobadas.value);
+  toastStore.success('PDF generado', 'El archivo se ha descargado correctamente');
 };
 
 onMounted(async () => {

@@ -48,7 +48,10 @@
       <CardSkeleton v-if="loading" :count="4" :columns="4" />
       
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="card">
+        <button
+          @click="$router.push('/productos')"
+          class="card text-left hover:shadow-lg transition-shadow cursor-pointer hover:bg-blue-50"
+        >
           <div class="flex items-center">
             <div class="p-3 rounded-full bg-blue-100 text-blue-600">
               <svg
@@ -72,9 +75,12 @@
               </p>
             </div>
           </div>
-        </div>
+        </button>
 
-        <div class="card">
+        <button
+          @click="$router.push('/productos?filter=stock-bajo')"
+          class="card text-left hover:shadow-lg transition-shadow cursor-pointer hover:bg-red-50"
+        >
           <div class="flex items-center">
             <div class="p-3 rounded-full bg-red-100 text-red-600">
               <svg
@@ -98,9 +104,12 @@
               </p>
             </div>
           </div>
-        </div>
+        </button>
 
-        <div class="card">
+        <button
+          @click="$router.push('/solicitudes')"
+          class="card text-left hover:shadow-lg transition-shadow cursor-pointer hover:bg-yellow-50"
+        >
           <div class="flex items-center">
             <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
               <svg
@@ -126,9 +135,12 @@
               </p>
             </div>
           </div>
-        </div>
+        </button>
 
-        <div class="card">
+        <button
+          @click="$router.push('/inventario')"
+          class="card text-left hover:shadow-lg transition-shadow cursor-pointer hover:bg-green-50"
+        >
           <div class="flex items-center">
             <div class="p-3 rounded-full bg-green-100 text-green-600">
               <svg
@@ -152,7 +164,7 @@
               </p>
             </div>
           </div>
-        </div>
+        </button>
       </div>
 
       <!-- Gráficos y tablas -->

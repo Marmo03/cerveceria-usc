@@ -20,6 +20,7 @@ import reportsRoutes from './controllers/reports.js'
 import logisticsRoutes from './controllers/logistics.js'
 import solicitudesRoutes from './controllers/solicitudes.js'
 import usuariosRoutes from './controllers/usuarios.js'
+import webhooksRoutes from './controllers/webhooks.js'
 import multipart from '@fastify/multipart'
 
 // Importar middleware de autenticación
@@ -116,7 +117,7 @@ server.decorate('requireActiveUser', requireActiveUser)
 async function configurePlugins() {
   // CORS
   await server.register(cors, {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
     credentials: true,
   })
 
@@ -184,6 +185,14 @@ async function configurePlugins() {
           name: 'Usuarios',
           description: 'Gestión de usuarios y roles (solo ADMIN)',
         },
+        {
+          name: 'Webhooks',
+          description: 'Webhooks para automatización con n8n',
+        },
+        {
+          name: 'Automatización',
+          description: 'Endpoints RPA para n8n',
+        },
       ],
     },
   })
@@ -219,6 +228,7 @@ async function configureRoutes() {
   await server.register(salesRoutes, { prefix: '/api/sales' })
   await server.register(logisticsRoutes, { prefix: '/api/logistics' }) // ✅ MIGRADO
   await server.register(reportsRoutes, { prefix: '/api/reports' }) // ✅ MIGRADO
+  await server.register(webhooksRoutes, { prefix: '/api' }) // Webhooks para n8n
 }
 
 // Verificar salud de la base de datos

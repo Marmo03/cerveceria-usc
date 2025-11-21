@@ -1,4 +1,5 @@
 import { FastifyPluginAsync } from 'fastify'
+import axios from 'axios'
 import {
   createTransportistaSchema,
   updateTransportistaSchema,
@@ -489,6 +490,82 @@ const logisticsRoutes: FastifyPluginAsync = async (server) => {
       },
     })
   })
+
+  // ===== PROXY PARA SERVIENTREGA API (evita CORS) =====
+
+  // Proxy genérico para Servientrega
+  server.get('/servientrega-proxy/*', async (request, reply) => {
+    try {
+      const path = (request.params as any)['*']
+      const queryString = new URLSearchParams(request.query as any).toString()
+      const url = `https://mobile.servientrega.com/ApiIngresoCLientes/api/${path}${queryString ? '?' + queryString : ''}`
+      
+      const response = await axios.get(url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0'
+        },
+        httpsAgent: new (await import('https')).Agent({
+          rejectUnauthorized: false
+        })
+      })
+      
+      return reply.send(response.data)
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message
+      })
+    }
+  })
+
+  // POST /api/logistics/geocodificar - Geocodificar dirección (Nominatim/OpenStreetMap)
+  server.post<{
+    Body: {
+      direccion: string
+      ciudad?: string
+    }
+  }>(
+    '/geocodificar',
+    {
+      schema: {
+        tags: ['logistics'],
+        description: 'Convertir dirección a coordenadas',
+        body: {
+          type: 'object',
+          required: ['direccion'],
+          properties: {
+            direccion: { type: 'string' },
+            ciudad: { type: 'string' }
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      try {
+        const { geocodificarDireccion } = await import('../services/servientrega.js')
+        
+        const resultado = await geocodificarDireccion(request.body.direccion, request.body.ciudad)
+        
+        if (!resultado) {
+          return reply.status(404).send({
+            success: false,
+            error: 'No se pudo geocodificar la dirección'
+          })
+        }
+        
+        return reply.send({
+          success: true,
+          data: resultado
+        })
+      } catch (error: any) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message
+        })
+      }
+    }
+  )
 }
 
 export default logisticsRoutes

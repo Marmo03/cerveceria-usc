@@ -21,13 +21,19 @@
   "dependencies": {
     "@headlessui/vue": "^1.7.16",
     "@heroicons/vue": "^2.0.18",
+    "@vue-leaflet/vue-leaflet": "^0.10.1",
     "@vueuse/core": "^10.5.0",
     "axios": "^1.6.2",
     "chart.js": "^4.5.1",
+    "date-fns": "^4.1.0",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
+    "leaflet": "^1.9.4",
     "pinia": "^2.1.7",
     "vue": "^3.3.8",
     "vue-chartjs": "^5.3.3",
-    "vue-router": "^4.2.5"
+    "vue-router": "^4.2.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

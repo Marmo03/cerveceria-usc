@@ -14,8 +14,14 @@ const rechazarSolicitudSchema = z.object({
   comentario: z.string().min(1, 'El comentario es requerido'),
 })
 
+// Schema de validación para actualizar cantidad
+const actualizarCantidadSchema = z.object({
+  cantidad: z.number().int().positive('La cantidad debe ser mayor a 0'),
+})
+
 type CrearSolicitudBody = z.infer<typeof crearSolicitudSchema>
 type RechazarSolicitudBody = z.infer<typeof rechazarSolicitudSchema>
+type ActualizarCantidadBody = z.infer<typeof actualizarCantidadSchema>
 
 const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
   // POST / - Crear nueva solicitud
@@ -370,7 +376,15 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
     async (request, reply) => {
       try {
         const { id } = request.params
-        const userId = request.currentUser!.userId
+        
+        // Verificar que el usuario está autenticado
+        if (!request.currentUser || !request.currentUser.userId) {
+          return reply.status(401).send({
+            error: 'Usuario no autenticado',
+          })
+        }
+        
+        const userId = request.currentUser.userId
 
         const solicitudResult = await fastify.db.query(
           'SELECT id, estado, "historialJSON" FROM solicitudes_compra WHERE id = $1',
@@ -475,7 +489,14 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
       try {
         const { id } = request.params
         const data = rechazarSolicitudSchema.parse(request.body)
-        const userId = request.currentUser!.userId
+        
+        if (!request.currentUser || !request.currentUser.userId) {
+          return reply.status(401).send({
+            error: 'Usuario no autenticado',
+          })
+        }
+        
+        const userId = request.currentUser.userId
 
         const solicitudResult = await fastify.db.query(
           'SELECT id, estado, "historialJSON" FROM solicitudes_compra WHERE id = $1',
@@ -546,6 +567,132 @@ const solicitudesRoutes: FastifyPluginAsync = async (fastify) => {
         }
         reply.status(500).send({
           error: 'Error al rechazar la solicitud',
+          message: error.message,
+        })
+      }
+    }
+  )
+
+  // PATCH /:id/cantidad - Actualizar cantidad de solicitud pendiente
+  fastify.patch<{
+    Params: { id: string }
+    Body: ActualizarCantidadBody
+  }>(
+    '/:id/cantidad',
+    {
+      preHandler: [
+        fastify.authenticate,
+        fastify.requireRole(['ADMIN', 'APROBADOR']),
+      ],
+      schema: {
+        tags: ['Solicitudes'],
+        summary: 'Actualizar cantidad de solicitud pendiente',
+        description: 'Permite a ADMIN o APROBADOR modificar la cantidad de una solicitud pendiente',
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: {
+            id: { type: 'string' },
+          },
+        },
+        body: {
+          type: 'object',
+          required: ['cantidad'],
+          properties: {
+            cantidad: { type: 'integer', minimum: 1 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { id } = request.params
+        const data = actualizarCantidadSchema.parse(request.body)
+        
+        if (!request.currentUser || !request.currentUser.userId) {
+          return reply.status(401).send({
+            error: 'Usuario no autenticado',
+          })
+        }
+        
+        const userId = request.currentUser.userId
+
+        // Verificar que la solicitud existe y está aprobada
+        const solicitudResult = await fastify.db.query(
+          'SELECT id, estado, cantidad, "historialJSON" FROM solicitudes_compra WHERE id = $1',
+          [id]
+        )
+
+        if (solicitudResult.rows.length === 0) {
+          return reply.status(404).send({
+            error: 'Solicitud no encontrada',
+          })
+        }
+
+        const solicitud = solicitudResult.rows[0]
+
+        // Solo permitir editar si está pendiente
+        if (solicitud.estado !== 'PENDIENTE') {
+          return reply.status(400).send({
+            error: 'Solo se puede modificar la cantidad de solicitudes pendientes',
+          })
+        }
+
+        const cantidadAnterior = solicitud.cantidad
+
+        // Actualizar historial
+        const historial = JSON.parse(solicitud.historialJSON || '[]')
+        historial.push({
+          fecha: new Date().toISOString(),
+          accion: 'CANTIDAD_MODIFICADA',
+          usuarioId: userId,
+          comentario: `Cantidad modificada de ${cantidadAnterior} a ${data.cantidad}`,
+          cantidadAnterior,
+          cantidadNueva: data.cantidad,
+        })
+
+        // Actualizar cantidad
+        await fastify.db.query(`
+          UPDATE solicitudes_compra 
+          SET cantidad = $1, "historialJSON" = $2
+          WHERE id = $3
+        `, [data.cantidad, JSON.stringify(historial), id])
+
+        // Obtener solicitud actualizada con relaciones
+        const solicitudActualizadaResult = await fastify.db.query(`
+          SELECT 
+            sc.id, sc."productoId", sc.cantidad, sc.estado, sc."creadorId", 
+            sc."aprobadorActualId", sc."fechaCreacion", sc."historialJSON",
+            json_build_object(
+              'id', p.id,
+              'sku', p.sku,
+              'nombre', p.nombre,
+              'unidad', p.unidad,
+              'costo', p.costo
+            ) as producto,
+            json_build_object(
+              'id', c.id,
+              'firstName', c."firstName",
+              'lastName', c."lastName",
+              'email', c.email
+            ) as creador
+          FROM solicitudes_compra sc
+          INNER JOIN productos p ON sc."productoId" = p.id
+          INNER JOIN users c ON sc."creadorId" = c.id
+          WHERE sc.id = $1
+        `, [id])
+
+        reply.send(solicitudActualizadaResult.rows[0])
+      } catch (error: any) {
+        request.log.error(error)
+        if (error instanceof z.ZodError) {
+          return reply.status(400).send({
+            error: 'Datos inválidos',
+            details: error.errors,
+          })
+        }
+        reply.status(500).send({
+          error: 'Error al actualizar la cantidad',
           message: error.message,
         })
       }

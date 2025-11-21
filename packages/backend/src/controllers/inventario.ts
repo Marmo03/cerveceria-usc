@@ -172,7 +172,7 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
 
           // Verificar que el producto existe y obtener stock actual
           const productoResult = await client.query(
-            'SELECT id, sku, nombre, "stockActual" FROM productos WHERE id = $1',
+            'SELECT id, sku, nombre, "stockActual", "stockMin", costo FROM productos WHERE id = $1',
             [datosMovimiento.productoId]
           )
 
@@ -267,6 +267,112 @@ const inventarioRoutes: FastifyPluginAsync = async (fastify) => {
             },
             'Movimiento de inventario registrado'
           )
+
+          // 🤖 AUTOMATIZACIÓN RPA con n8n: Detectar stock bajo y notificar
+          // Verificar si el producto quedó en stock bajo después del movimiento
+          if (stockNuevo <= producto.stockMin) {
+            request.log.warn(
+              {
+                productoId: datosMovimiento.productoId,
+                nombre: producto.nombre,
+                stockNuevo,
+                stockMin: producto.stockMin,
+              },
+              '⚠️ [RPA-n8n] Stock bajo detectado - Disparando webhook a n8n'
+            )
+
+            // Calcular cantidad sugerida (2x el stock mínimo menos el stock actual)
+            const cantidadSugerida = Math.max(
+              producto.stockMin * 2 - stockNuevo,
+              producto.stockMin
+            )
+
+            // Determinar prioridad según qué tan bajo está el stock
+            let prioridad: 'ALTA' | 'MEDIA' | 'BAJA'
+            if (stockNuevo <= 0 || stockNuevo <= producto.stockMin * 0.3) {
+              prioridad = 'ALTA'
+            } else if (stockNuevo <= producto.stockMin * 0.7) {
+              prioridad = 'MEDIA'
+            } else {
+              prioridad = 'BAJA'
+            }
+
+            // Disparar webhook a n8n de forma asíncrona (no bloqueante)
+            const n8nWebhookUrl = process.env.N8N_WEBHOOK_STOCK_BAJO || 'http://localhost:5678/webhook/stock-bajo'
+            
+            const payload = {
+              evento: 'STOCK_BAJO_DETECTADO',
+              timestamp: new Date().toISOString(),
+              movimiento: {
+                id: resultado.id,
+                tipo: datosMovimiento.tipo,
+                cantidad: datosMovimiento.cantidad,
+                comentario: datosMovimiento.comentario,
+                referencia: datosMovimiento.referencia,
+              },
+              producto: {
+                id: datosMovimiento.productoId,
+                sku: producto.sku,
+                nombre: producto.nombre,
+                stockAnterior,
+                stockNuevo,
+                stockMin: producto.stockMin,
+              },
+              sugerencia: {
+                cantidadSugerida,
+                prioridad,
+                costoEstimado: cantidadSugerida * (producto.costo || 0),
+              },
+              callbackUrl: `${process.env.API_URL || 'http://localhost:3001'}/api/webhooks/crear-solicitud`,
+            }
+
+            // Llamar a n8n sin bloquear la respuesta
+            fetch(n8nWebhookUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(payload),
+            })
+              .then(async (response) => {
+                if (response.ok) {
+                  const data = await response.json()
+                  request.log.info(
+                    {
+                      productoId: datosMovimiento.productoId,
+                      n8nResponse: data,
+                    },
+                    '✅ [RPA-n8n] Webhook enviado exitosamente'
+                  )
+                } else {
+                  request.log.error(
+                    {
+                      productoId: datosMovimiento.productoId,
+                      status: response.status,
+                      statusText: response.statusText,
+                    },
+                    '❌ [RPA-n8n] Error en respuesta del webhook'
+                  )
+                }
+              })
+              .catch((error) => {
+                request.log.error(
+                  {
+                    productoId: datosMovimiento.productoId,
+                    error: error.message,
+                  },
+                  '❌ [RPA-n8n] Error al llamar webhook de n8n'
+                )
+              })
+
+            // Agregar información a la respuesta
+            resultado.rpaNotificacion = {
+              enviado: true,
+              webhook: n8nWebhookUrl,
+              prioridad,
+              mensaje: `Notificación de stock bajo enviada a n8n (${prioridad} prioridad)`,
+            }
+          }
 
           return reply.status(201).send({
             success: true,

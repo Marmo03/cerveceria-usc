@@ -396,7 +396,8 @@
           >
             <button
               v-if="activeTab === 'manual'"
-              type="submit"
+              type="button"
+              @click="guardar"
               :disabled="loading || !formularioValido"
               class="btn btn-primary"
               :class="{
@@ -480,18 +481,33 @@ const productoSeleccionado = computed(() => {
 });
 
 const formularioValido = computed(() => {
+  console.log("🔍 [VALIDACIÓN] Ejecutando formularioValido");
+  console.log("🔍 [VALIDACIÓN] productoId:", form.value.productoId);
+  console.log("🔍 [VALIDACIÓN] cantidad:", form.value.cantidad);
+  console.log("🔍 [VALIDACIÓN] tipo:", form.value.tipo);
+  
   // Validar que productoId no esté vacío y sea un UUID válido
-  if (!form.value.productoId || form.value.productoId.trim() === "")
+  if (!form.value.productoId || form.value.productoId.trim() === "") {
+    console.log("❌ [VALIDACIÓN] productoId vacío");
     return false;
+  }
 
   // Validar que cantidad sea mayor a 0
-  if (!form.value.cantidad || form.value.cantidad <= 0) return false;
+  if (!form.value.cantidad || form.value.cantidad <= 0) {
+    console.log("❌ [VALIDACIÓN] cantidad inválida");
+    return false;
+  }
 
   // Validar stock suficiente para salidas
   if (form.value.tipo === "SALIDA" && productoSeleccionado.value) {
-    return form.value.cantidad <= productoSeleccionado.value.stockActual;
+    const stockSuficiente = form.value.cantidad <= productoSeleccionado.value.stockActual;
+    console.log("🔍 [VALIDACIÓN] SALIDA - Stock suficiente:", stockSuficiente);
+    console.log("🔍 [VALIDACIÓN] Cantidad a sacar:", form.value.cantidad);
+    console.log("🔍 [VALIDACIÓN] Stock actual:", productoSeleccionado.value.stockActual);
+    return stockSuficiente;
   }
 
+  console.log("✅ [VALIDACIÓN] Formulario válido");
   return true;
 });
 
@@ -543,18 +559,26 @@ const cerrar = () => {
 };
 
 const guardar = async () => {
+  console.log("🔵 [GUARDAR] Función guardar llamada");
+  console.log("🔵 [GUARDAR] formularioValido:", formularioValido.value);
+  console.log("🔵 [GUARDAR] form.value:", form.value);
+  console.log("🔵 [GUARDAR] productoSeleccionado:", productoSeleccionado.value);
+  
   // Validación adicional antes de enviar
   if (!formularioValido.value) {
+    console.error("❌ [GUARDAR] Formulario inválido");
     error.value = "Por favor complete todos los campos requeridos";
     return;
   }
 
   // Validación explícita del productoId
   if (!form.value.productoId || form.value.productoId.trim() === "") {
+    console.error("❌ [GUARDAR] ProductoId vacío");
     error.value = "Debe seleccionar un producto";
     return;
   }
 
+  console.log("✅ [GUARDAR] Validaciones pasadas, iniciando registro...");
   loading.value = true;
   error.value = "";
 
@@ -583,7 +607,7 @@ const guardar = async () => {
       `${form.value.tipo} de ${form.value.cantidad} unidades de ${productoSeleccionado.value?.nombre}`
     );
     
-    // Solo emitir success, el padre cerrará el modal después de recargar
+    // Solo emitir success, el padre se encarga de cerrar el modal y recargar datos
     emit("success");
   } catch (err: any) {
     console.error("❌ ERROR al registrar movimiento:", err);
@@ -680,8 +704,13 @@ const importarMovimientos = async () => {
 watch(
   () => props.modelValue,
   async (isOpen) => {
-    if (isOpen && productos.value.length === 0) {
-      await productsStore.fetchProductos();
+    if (isOpen) {
+      if (productos.value.length === 0) {
+        await productsStore.fetchProductos();
+      }
+    } else {
+      // Resetear formulario cuando se cierra el modal
+      setTimeout(resetForm, 300);
     }
   }
 );

@@ -35,16 +35,9 @@ services:
       N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
       N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-n8n_password}
       
-      # Base de datos para n8n (usando PostgreSQL)
-      DB_TYPE: postgresdb
-      DB_POSTGRESDB_HOST: postgres
-      DB_POSTGRESDB_PORT: 5432
-      DB_POSTGRESDB_DATABASE: ${N8N_DB_NAME:-n8n}
-      DB_POSTGRESDB_USER: ${POSTGRES_USER:-cerveceria_user}
-      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-cerveceria_password}
-      
-      # Configuración de seguridad
-      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-your-encryption-key-here}
+      # Base de datos para n8n (usando SQLite para simplicidad)
+      DB_TYPE: sqlite
+      DB_SQLITE_VACUUM_ON_STARTUP: "true"
       
       # Configuración de red
       WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678}
@@ -63,9 +56,6 @@ services:
       - ./n8n/credentials:/home/node/.n8n/credentials
     networks:
       - cerveceria-network
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5678/healthz || exit 1"]
       interval: 30s

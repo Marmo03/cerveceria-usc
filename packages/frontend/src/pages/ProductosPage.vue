@@ -120,11 +120,27 @@
                 <option value="false">Inactivos</option>
               </select>
             </div>
-            <div class="flex items-end">
-              <button @click="resetFilters" class="btn btn-secondary w-full">
-                Limpiar Filtros
-              </button>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Stock Bajo
+              </label>
+              <div class="flex items-center h-10">
+                <input
+                  id="stock-bajo-filter"
+                  v-model="filters.stockBajo"
+                  type="checkbox"
+                  class="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
+                />
+                <label for="stock-bajo-filter" class="ml-2 text-sm text-gray-700">
+                  Solo productos con stock bajo
+                </label>
+              </div>
             </div>
+          </div>
+          <div class="mt-4 flex justify-end">
+            <button @click="resetFilters" class="btn btn-secondary">
+              Limpiar Filtros
+            </button>
           </div>
         </div>
       </div>
@@ -404,6 +420,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { useProductsStore } from "../stores/products";
 import AppLayout from "../components/AppLayout.vue";
@@ -413,6 +430,7 @@ import TableSkeleton from "../components/TableSkeleton.vue";
 import CardSkeleton from "../components/CardSkeleton.vue";
 import Pagination from "../components/Pagination.vue";
 
+const router = useRouter();
 const authStore = useAuthStore();
 const productsStore = useProductsStore();
 
@@ -534,9 +552,10 @@ const formatPrice = (price: number) => {
 };
 
 const viewProduct = async (producto: any) => {
+  // Cargar detalles completos y abrir modal de edición en modo "solo lectura"
   await productsStore.fetchProductoById(producto.id);
-  console.log("Ver producto:", productsStore.productoActual);
-  // TODO: Implementar modal de detalles
+  productoSeleccionado.value = productsStore.productoActual;
+  showModal.value = true;
 };
 
 const editProduct = (producto: any) => {
