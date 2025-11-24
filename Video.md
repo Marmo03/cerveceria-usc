@@ -1,0 +1,3 @@
+Link del video storytelling
+
+https://usceduco7466-my.sharepoint.com/personal/juan_benitez03_usc_edu_co/_layouts/15/stream.aspx?sw=bypass&bypassReason=abandoned&id=%2Fpersonal%2Fjuan%5Fbenitez03%5Fusc%5Fedu%5Fco%2FDocuments%2FGesti%C3%B3n%20de%20Proyectos%20TI%2FPlataforma%20WEb%20Cerveceria%20usc%20%281%29%2Emp4&nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&ga=1&startedResponseCatch=true&referrer=StreamWebApp%2EWeb&referrerScenario=AddressBarCopied%2Eview%2E625bffb9%2Da3a9%2D4b1e%2D99d3%2D664c1e4b52e1
